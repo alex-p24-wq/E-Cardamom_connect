@@ -67,7 +67,7 @@ export default function CustomerProfile({ user }) {
     {
       id: 2,
       type: "UPI",
-      id: "user@upi",
+      upiId: "user@upi",
       isDefault: false
     }
   ];

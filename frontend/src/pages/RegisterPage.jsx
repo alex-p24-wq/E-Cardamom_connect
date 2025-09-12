@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Eye, EyeOff, CheckCircle, AlertCircle, User, Mail, Phone, Lock, FileText, MapPin, Building, Shield } from "lucide-react";
@@ -69,6 +69,13 @@ export default function RegisterPage() {
 
   const { image, label, tagline, icon: RoleIcon, color } = roleMeta[activeRole];
 
+  // Disable page scroll while on the registration page; only the right pane scrolls
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = previousOverflow; };
+  }, []);
+
   const strength = useMemo(() => {
     const p = form.password || "";
     let s = 0; if (p.length >= 8) s++; if (/[A-Z]/.test(p)) s++; if (/[0-9]/.test(p)) s++; if (/[^A-Za-z0-9]/.test(p)) s++;
@@ -136,7 +143,9 @@ export default function RegisterPage() {
     setApiError(null);
     setTouched((t) => ({ ...t, username: true, email: true, phone: true, password: true, confirm: true }));
     if (step === 1) {
-      if (Object.keys(errors).length > 0) return;
+      // For step 1, only require a valid email and verified OTP to proceed
+      if (errors.email) return;
+      if (!emailVerified) { setApiError('Please verify your email first.'); return; }
       setStep(2);
       return;
     }
@@ -155,10 +164,11 @@ export default function RegisterPage() {
 
   const canNext = useMemo(() => {
     if (step === 1) {
-      return Object.keys(errors).length === 0 && emailVerified;
+      // Only require a valid email and verified OTP to advance from step 1
+      return !errors.email && !!form.email && emailVerified;
     }
     return true;
-  }, [step, errors]);
+  }, [step, errors, emailVerified, form.email]);
 
   const onInput = (e) => setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
   const onBlur = (e) => setTouched((t) => ({ ...t, [e.target.name]: true }));
@@ -245,7 +255,7 @@ export default function RegisterPage() {
 
   return (
     <motion.div 
-      className="register-wrapper"
+      className="register-wrapper theme-v2"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.6 }}
@@ -284,126 +294,125 @@ export default function RegisterPage() {
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.2, duration: 0.6 }}
         >
-          <motion.h2 
-            className="title"
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4, duration: 0.5 }}
-          >
-            Create Account
-          </motion.h2>
-          <motion.p 
-            className="subtitle"
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5, duration: 0.5 }}
-          >
-            Join Cardo — tailored experience for your role
-          </motion.p>
-          
-          {/* Display API errors */}
-          <AnimatePresence>
-            {apiError && (
-              <motion.div 
-                className="api-error"
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
-                transition={{ duration: 0.3 }}
-              >
-                <AlertCircle size={16} style={{ marginRight: '8px', display: 'inline-block' }} />
-                {apiError}
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Role selector */}
-          <motion.div 
-            className="role-tabs" 
-            role="tablist" 
-            aria-label="Select user type"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.6, duration: 0.5 }}
-          >
-            {roles.map((key, index) => {
-              const IconComponent = roleMeta[key].icon;
-              return (
-                <motion.button
-                  key={key}
-                  type="button"
-                  className={`role-tab ${activeRole === key ? "active" : ""}`}
-                  onClick={() => setActiveRole(key)}
-                  aria-selected={activeRole === key}
-                  title={roleMeta[key].tagline}
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: 0.7 + index * 0.1, duration: 0.3 }}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  style={{ 
-                    borderColor: activeRole === key ? roleMeta[key].color : undefined,
-                    backgroundColor: activeRole === key ? `${roleMeta[key].color}15` : undefined
-                  }}
+          <div className="form-header">
+            <motion.h2 
+              className="title"
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2, duration: 0.4 }}
+            >
+              Create Account
+            </motion.h2>
+            <motion.p 
+              className="subtitle"
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.25, duration: 0.4 }}
+            >
+              Join Cardo — tailored experience for your role
+            </motion.p>
+            
+            <AnimatePresence>
+              {apiError && (
+                <motion.div 
+                  className="api-error"
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.25 }}
                 >
-                  <IconComponent size={16} style={{ marginRight: '6px' }} />
-                  {roleMeta[key].label}
-                </motion.button>
-              );
-            })}
-          </motion.div>
+                  <AlertCircle size={16} style={{ marginRight: '8px', display: 'inline-block' }} />
+                  {apiError}
+                </motion.div>
+              )}
+            </AnimatePresence>
 
-          {/* Progress */}
-          <motion.div 
-            className="progress" 
-            aria-label="Registration progress"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.8, duration: 0.5 }}
-          >
             <motion.div 
-              className="progress-bar" 
-              style={{ width: `${progress}%` }}
-              initial={{ width: 0 }}
-              animate={{ width: `${progress}%` }}
-              transition={{ duration: 0.5, ease: "easeOut" }}
-            />
-            <div className="steps-labels">
-              <motion.span 
-                className={step >= 1 ? "active" : ""}
-                animate={{ color: step >= 1 ? color : undefined }}
-                transition={{ duration: 0.3 }}
-              >
-                Account
-              </motion.span>
-              <motion.span 
-                className={step >= 2 ? "active" : ""}
-                animate={{ color: step >= 2 ? color : undefined }}
-                transition={{ duration: 0.3 }}
-              >
-                Details
-              </motion.span>
-              <motion.span 
-                className={step >= 3 ? "active" : ""}
-                animate={{ color: step >= 3 ? color : undefined }}
-                transition={{ duration: 0.3 }}
-              >
-                Review
-              </motion.span>
-            </div>
-          </motion.div>
+              className="role-tabs" 
+              role="tablist" 
+              aria-label="Select user type"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3, duration: 0.4 }}
+            >
+              {roles.map((key, index) => {
+                const IconComponent = roleMeta[key].icon;
+                return (
+                  <motion.button
+                    key={key}
+                    type="button"
+                    className={`role-tab ${activeRole === key ? "active" : ""}`}
+                    onClick={() => setActiveRole(key)}
+                    aria-selected={activeRole === key}
+                    title={roleMeta[key].tagline}
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.35 + index * 0.06, duration: 0.25 }}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    style={{ 
+                      borderColor: activeRole === key ? roleMeta[key].color : undefined,
+                      backgroundColor: activeRole === key ? `${roleMeta[key].color}15` : undefined
+                    }}
+                  >
+                    <IconComponent size={16} style={{ marginRight: '6px' }} />
+                    {roleMeta[key].label}
+                  </motion.button>
+                );
+              })}
+            </motion.div>
+
+            <motion.div 
+              className="progress" 
+              aria-label="Registration progress"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.35, duration: 0.4 }}
+            >
+              <motion.div 
+                className="progress-bar" 
+                style={{ width: `${progress}%` }}
+                initial={{ width: 0 }}
+                animate={{ width: `${progress}%` }}
+                transition={{ duration: 0.4, ease: "easeOut" }}
+              />
+              <div className="steps-labels">
+                <motion.span 
+                  className={step >= 1 ? "active" : ""}
+                  animate={{ color: step >= 1 ? color : undefined }}
+                  transition={{ duration: 0.2 }}
+                >
+                  Account
+                </motion.span>
+                <motion.span 
+                  className={step >= 2 ? "active" : ""}
+                  animate={{ color: step >= 2 ? color : undefined }}
+                  transition={{ duration: 0.2 }}
+                >
+                  Details
+                </motion.span>
+                <motion.span 
+                  className={step >= 3 ? "active" : ""}
+                  animate={{ color: step >= 3 ? color : undefined }}
+                  transition={{ duration: 0.2 }}
+                >
+                  Review
+                </motion.span>
+              </div>
+            </motion.div>
+          </div>
 
           {/* Step content */}
           <AnimatePresence mode="wait">
+            <motion.div
+              key={`step-${step}`}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.4 }}
+            >
             {step === 1 && (
-              <motion.div 
-                className="form-grid"
-                key="step1"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.4 }}
-              >
+              <div className="form-grid">
                 <motion.div 
                   className="input-group" 
                   style={{ gridColumn: "span 2" }}
@@ -474,8 +483,28 @@ export default function RegisterPage() {
                         if (em) return;
                         try {
                           setIsLoading(true);
-                          await sendEmailOtp(form.email);
-                          setApiError(null);
+                          const resp = await sendEmailOtp(form.email);
+                          if (resp) {
+                            if (resp.mode === 'smtp') {
+                              setApiError('OTP sent to your email! Please check your inbox.');
+                            } else if (resp.mode === 'jsonTransport' && resp.otp) {
+                              // Dev mode: show and prefill OTP since emails aren't delivered
+                              setRoleData((d) => ({ ...d, emailOtp: resp.otp }));
+                              setApiError('Dev mode: OTP generated and shown below. Emails are not delivered.');
+                            } else if (resp.mode === 'smtp-fallback' && resp.otp) {
+                              // SMTP error fallback in development: show OTP with hint
+                              setRoleData((d) => ({ ...d, emailOtp: resp.otp }));
+                              setApiError(`Email delivery failed (${resp.hint || 'check SMTP settings'}). Using dev fallback: OTP shown below.`);
+                            } else if (resp.delivered === false && resp.otp) {
+                              // Generic fallback if mode is missing
+                              setRoleData((d) => ({ ...d, emailOtp: resp.otp }));
+                              setApiError('OTP generated and shown below.');
+                            } else {
+                              setApiError('OTP request processed.');
+                            }
+                          } else {
+                            setApiError('Failed to send OTP');
+                          }
                         } catch (err) {
                           setApiError(err.message || 'Failed to send OTP');
                         } finally {
@@ -497,7 +526,9 @@ export default function RegisterPage() {
                       name="emailOtp"
                       type="text"
                       inputMode="numeric"
+                      autoComplete="one-time-code"
                       placeholder="Enter 6-digit code"
+                      value={roleData.emailOtp || ''}
                       onBlur={() => setTouched((t) => ({ ...t, emailOtp: true }))}
                       onChange={(e) => setRoleData((d) => ({ ...d, emailOtp: e.target.value }))}
                     />
@@ -669,7 +700,7 @@ export default function RegisterPage() {
                     )}
                   </AnimatePresence>
                 </motion.div>
-              </motion.div>
+              </div>
             )}
 
           {step === 2 && (
@@ -730,24 +761,25 @@ export default function RegisterPage() {
               <p className="help">You can edit details by going back before submitting.</p>
             </div>
           )}
-
-          {/* Actions */}
-          <div className="actions">
-            <div className="nav-buttons">
-              {step > 1 && (
-                <button type="button" className="ghost-btn" onClick={back}>Back</button>
-              )}
-              {step < 3 ? (
-                <button type="button" className="submit-btn" onClick={next} disabled={!canNext}>Next{step === 1 && !emailVerified ? ' (verify email first)' : ''}</button>
-              ) : (
-                <button type="submit" className="submit-btn" onClick={handleSubmit} disabled={isLoading}>
-                  {isLoading ? "Creating..." : "Create account"}
-                </button>
-              )}
-            </div>
-            <div className="alt">Already have an account? <a href="/login">Login</a></div>
-          </div>
+            </motion.div>
         </AnimatePresence>
+
+        {/* Sticky actions footer inside the form pane */}
+        <div className="actions form-footer">
+          <div className="nav-buttons">
+            {step > 1 && (
+              <button type="button" className="ghost-btn" onClick={back}>Back</button>
+            )}
+            {step < 3 ? (
+              <button type="button" className="submit-btn" onClick={next} disabled={!canNext}>Next{step === 1 && !emailVerified ? ' (verify email first)' : ''}</button>
+            ) : (
+              <button type="submit" className="submit-btn" onClick={handleSubmit} disabled={isLoading}>
+                {isLoading ? "Creating..." : "Create account"}
+              </button>
+            )}
+          </div>
+          <div className="alt">Already have an account? <a href="/login">Login</a></div>
+        </div>
         </motion.form>
       </motion.div>
     </motion.div>
