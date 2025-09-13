@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:5000/api';
+const API_URL = (import.meta?.env?.VITE_API_URL) || 'http://localhost:5000/api';
 
 const api = axios.create({
   baseURL: API_URL,
@@ -36,7 +36,8 @@ export const registerUser = async (userData) => {
     const response = await api.post('/auth/register', userData);
     return response.data;
   } catch (error) {
-    throw error.response?.data || { message: 'Network error' };
+    const msg = error?.response?.data?.message || error?.response?.data?.errors?.[0]?.msg || error?.message || 'Network error';
+    throw { message: msg };
   }
 };
 
@@ -45,7 +46,8 @@ export const loginUser = async (credentials) => {
     const response = await api.post('/auth/login', credentials);
     return response.data;
   } catch (error) {
-    throw error.response?.data || { message: 'Network error' };
+    const msg = error?.response?.data?.message || error?.response?.data?.errors?.[0]?.msg || error?.message || 'Network error';
+    throw { message: msg };
   }
 };
 
@@ -54,7 +56,8 @@ export const sendEmailOtp = async (email) => {
     const res = await api.post('/auth/send-email-otp', { email });
     return res.data;
   } catch (error) {
-    throw error.response?.data || { message: 'Network error' };
+    const msg = error?.response?.data?.message || error?.response?.data?.errors?.[0]?.msg || error?.message || 'Network error';
+    throw { message: msg };
   }
 };
 
@@ -63,7 +66,8 @@ export const verifyEmailOtp = async (email, otp) => {
     const res = await api.post('/auth/verify-email-otp', { email, otp });
     return res.data;
   } catch (error) {
-    throw error.response?.data || { message: 'Network error' };
+    const msg = error?.response?.data?.message || error?.response?.data?.errors?.[0]?.msg || error?.message || 'Network error';
+    throw { message: msg };
   }
 };
 

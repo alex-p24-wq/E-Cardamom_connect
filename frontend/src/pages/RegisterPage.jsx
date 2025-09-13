@@ -295,6 +295,7 @@ export default function RegisterPage() {
           transition={{ delay: 0.2, duration: 0.6 }}
         >
           <div className="form-header">
+            <img className="form-logo" src="/images/cardooo1.jpg" alt="Cardo logo" loading="lazy" />
             <motion.h2 
               className="title"
               initial={{ opacity: 0, y: -10 }}
