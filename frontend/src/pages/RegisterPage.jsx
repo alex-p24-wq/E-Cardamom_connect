@@ -17,35 +17,35 @@ import {
 const roleMeta = {
   customer: { 
     label: "Customer", 
-    image: "/images/plant11.jpeg", 
+    image: "/images/img 1.jpeg", 
     tagline: "Shop and trade with ease",
     icon: User,
     color: "#3B82F6"
   },
   farmer: { 
     label: "Farmer", 
-    image: "/images/plant12.jpeg", 
+    image: "/images/img 3.jpeg", 
     tagline: "Grow. Grade. Get better prices",
     icon: MapPin,
     color: "#10B981"
   },
   agricare: { 
     label: "AgriCare", 
-    image: "/images/plant13.jpeg", 
+    image: "/images/img 11.jpg", 
     tagline: "Supply quality. Serve farmers",
     icon: Building,
     color: "#F59E0B"
   },
   hub: { 
     label: "Hub Manager", 
-    image: "/images/plant14.jpeg", 
+    image: "/images/img 5.jpeg", 
     tagline: "Run operations smoothly",
     icon: Shield,
     color: "#8B5CF6"
   },
   admin: { 
     label: "Admin", 
-    image: "/images/plant15.jpeg", 
+    image: "/images/img 6.jpeg", 
     tagline: "Securely manage access",
     icon: Shield,
     color: "#EF4444"

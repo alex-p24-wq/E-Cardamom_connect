@@ -1,155 +1,154 @@
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import api from "../../../services/api";
+import { addToWishlist, removeFromWishlist, getWishlist, createCustomerOrder } from "../../../services/api";
 import "../../../css/CustomerDashboard.css";
 
 export default function CustomerMarketplace({ user }) {
   const [activeCategory, setActiveCategory] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("popularity");
-  
-  // Sample data for demonstration
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [items, setItems] = useState([]);
+  const [wishlistIds, setWishlistIds] = useState([]);
+
+  // Scan modal state
+  const [scanOpen, setScanOpen] = useState(false);
+  const [scanTarget, setScanTarget] = useState(null); // product
+  const [scanLoading, setScanLoading] = useState(false);
+  const [scanResult, setScanResult] = useState(null);
+  const [scanError, setScanError] = useState("");
+
+  // Categories mapped to backend grades
   const categories = [
     { id: "all", name: "All Products" },
-    { id: "premium", name: "Premium Grade" },
-    { id: "organic", name: "Organic" },
-    { id: "regular", name: "Regular Grade" },
-    { id: "seeds", name: "Seeds & Saplings" },
-    { id: "tools", name: "Tools & Equipment" },
-  ];
-  
-  const products = [
-    { 
-      id: 1, 
-      name: "Premium Cardamom", 
-      category: "premium",
-      price: 450, 
-      rating: 4.8,
-      reviews: 124,
-      image: "/images/plant11.jpeg",
-      seller: "Green Valley Farms",
-      inStock: true,
-      popularity: 95
-    },
-    { 
-      id: 2, 
-      name: "Organic Cardamom", 
-      category: "organic",
-      price: 550, 
-      rating: 4.9,
-      reviews: 89,
-      image: "/images/plant12.jpeg",
-      seller: "Organic Treasures",
-      inStock: true,
-      popularity: 90
-    },
-    { 
-      id: 3, 
-      name: "Special Grade Cardamom", 
-      category: "premium",
-      price: 650, 
-      rating: 4.7,
-      reviews: 56,
-      image: "/images/plant13.jpeg",
-      seller: "Highland Spices",
-      inStock: true,
-      popularity: 85
-    },
-    { 
-      id: 4, 
-      name: "Regular Cardamom", 
-      category: "regular",
-      price: 350, 
-      rating: 4.3,
-      reviews: 210,
-      image: "/images/plant14.jpeg",
-      seller: "Valley Farms",
-      inStock: true,
-      popularity: 80
-    },
-    { 
-      id: 5, 
-      name: "Cardamom Seeds", 
-      category: "seeds",
-      price: 250, 
-      rating: 4.5,
-      reviews: 45,
-      image: "/images/plant15.jpeg",
-      seller: "Green Seeds Co.",
-      inStock: false,
-      popularity: 70
-    },
-    { 
-      id: 6, 
-      name: "Cardamom Harvesting Tool", 
-      category: "tools",
-      price: 1200, 
-      rating: 4.6,
-      reviews: 32,
-      image: "/images/plant11.jpeg",
-      seller: "AgriTools Inc.",
-      inStock: true,
-      popularity: 65
-    },
-    { 
-      id: 7, 
-      name: "Cardamom Saplings", 
-      category: "seeds",
-      price: 180, 
-      rating: 4.4,
-      reviews: 67,
-      image: "/images/plant12.jpeg",
-      seller: "Green Thumb Nursery",
-      inStock: true,
-      popularity: 75
-    },
-    { 
-      id: 8, 
-      name: "Organic Fertilizer", 
-      category: "organic",
-      price: 450, 
-      rating: 4.7,
-      reviews: 93,
-      image: "/images/plant13.jpeg",
-      seller: "Organic Solutions",
-      inStock: true,
-      popularity: 60
-    },
+    { id: "Premium", name: "Premium Grade" },
+    { id: "Organic", name: "Organic" },
+    { id: "Regular", name: "Regular Grade" },
   ];
 
-  // Filter products based on active category and search query
-  const filteredProducts = products.filter(product => {
-    const matchesCategory = activeCategory === "all" || product.category === activeCategory;
-    const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                         product.seller.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesCategory && matchesSearch;
-  });
+  // Load products from backend (public list)
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      setError("");
+      try {
+        const params = {};
+        if (activeCategory !== "all") params.grade = activeCategory;
+        if (searchQuery) params.q = searchQuery;
+        const { data } = await api.get("/customer/products", { params });
+        setItems(data?.items || []);
+        // fetch wishlist (ignore errors if unauthenticated)
+        try {
+          const w = await getWishlist();
+          const ids = (w.items || []).map(p => String(p._id || p.id));
+          setWishlistIds(ids);
+        } catch (_) {}
+      } catch (e) {
+        setError(e?.response?.data?.message || e?.message || "Failed to load products");
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, [activeCategory, searchQuery]);
 
-  // Sort products
-  const sortedProducts = [...filteredProducts].sort((a, b) => {
+  // Client-side sort (basic)
+  const sorted = useMemo(() => {
+    const arr = [...items];
     switch (sortBy) {
       case "price-low":
-        return a.price - b.price;
+        return arr.sort((a, b) => (a.price || 0) - (b.price || 0));
       case "price-high":
-        return b.price - a.price;
+        return arr.sort((a, b) => (b.price || 0) - (a.price || 0));
       case "rating":
-        return b.rating - a.rating;
+        // Placeholder: no ratings from backend yet
+        return arr;
       case "popularity":
       default:
-        return b.popularity - a.popularity;
+        return arr; // no popularity metric yet
     }
-  });
+  }, [items, sortBy]);
+
+  // Image analysis (on-device heuristic based on average green)
+  const analyzeImageHeuristic = async (imageUrl) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    await new Promise((resolve, reject) => {
+      img.onload = resolve;
+      img.onerror = reject;
+      img.src = imageUrl;
+    });
+
+    const maxSide = 256;
+    const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+    const w = Math.max(1, Math.floor(img.width * scale));
+    const h = Math.max(1, Math.floor(img.height * scale));
+
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(img, 0, 0, w, h);
+
+    const { data } = ctx.getImageData(0, 0, w, h);
+    let rT = 0, gT = 0, bT = 0, n = 0;
+    const stride = 4 * 4;
+    for (let i = 0; i < data.length; i += stride) {
+      rT += data[i];
+      gT += data[i + 1];
+      bT += data[i + 2];
+      n++;
+    }
+    const avgR = rT / n, avgG = gT / n, avgB = bT / n;
+    const brightness = (avgR + avgG + avgB) / 3;
+
+    let g = "Regular";
+    const greenDom = avgG - Math.max(avgR, avgB);
+    if (greenDom > 20 && avgG > 110 && brightness > 70 && brightness < 200) g = "Premium";
+    else if (avgG >= avgR && avgG >= avgB) g = "Special";
+    return g;
+  };
+
+  const openScan = (product) => {
+    setScanTarget(product);
+    setScanResult(null);
+    setScanError("");
+    setScanOpen(true);
+  };
+
+  const runScan = async () => {
+    if (!scanTarget?.image) return;
+    setScanLoading(true);
+    setScanResult(null);
+    setScanError("");
+    try {
+      const grade = await analyzeImageHeuristic(scanTarget.image);
+      setScanResult(grade);
+    } catch (e) {
+      setScanError("Failed to scan the image. Try again.");
+    } finally {
+      setScanLoading(false);
+    }
+  };
 
   return (
     <div className="customer-marketplace">
-      <div className="page-header">
-        <h2>Marketplace</h2>
-        <p>Discover and shop quality cardamom products</p>
+      {/* Hero */}
+      <div className="market-hero">
+        <div>
+          <h2>Marketplace</h2>
+          <p>Discover premium cardamom directly from farmers</p>
+        </div>
+        <div className="hero-badge">🌿 Fresh Harvest</div>
       </div>
 
-      <div className="marketplace-controls">
+      {/* Controls */}
+      <div className="marketplace-controls controls-card">
         <div className="search-bar">
           <input
             type="text"
-            placeholder="Search products or sellers..."
+            placeholder="Search products or locations..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -163,7 +162,7 @@ export default function CustomerMarketplace({ user }) {
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value)}
           >
-            <option value="popularity">Popularity</option>
+            <option value="popularity">Default</option>
             <option value="price-low">Price: Low to High</option>
             <option value="price-high">Price: High to Low</option>
             <option value="rating">Customer Rating</option>
@@ -172,7 +171,8 @@ export default function CustomerMarketplace({ user }) {
       </div>
 
       <div className="marketplace-layout">
-        <div className="categories-sidebar">
+        {/* Sidebar */}
+        <div className="categories-sidebar card">
           <h3>Categories</h3>
           <ul className="category-list">
             {categories.map((category) => (
@@ -186,49 +186,34 @@ export default function CustomerMarketplace({ user }) {
               </li>
             ))}
           </ul>
-          
-          <div className="filter-section">
-            <h3>Price Range</h3>
-            <div className="price-range">
-              <input type="range" min="0" max="2000" step="100" />
-              <div className="price-inputs">
-                <input type="number" placeholder="Min" min="0" />
-                <span>-</span>
-                <input type="number" placeholder="Max" min="0" />
-              </div>
-            </div>
-          </div>
-          
-          <div className="filter-section">
-            <h3>Seller Rating</h3>
-            <div className="rating-options">
-              <label>
-                <input type="checkbox" checked /> 4★ & above
-              </label>
-              <label>
-                <input type="checkbox" /> 3★ & above
-              </label>
-            </div>
-          </div>
-          
-          <div className="filter-section">
-            <h3>Availability</h3>
-            <div className="availability-options">
-              <label>
-                <input type="checkbox" checked /> In Stock
-              </label>
-            </div>
-          </div>
-          
-          <button className="apply-filters-btn">Apply Filters</button>
         </div>
         
+        {/* Products */}
         <div className="products-grid">
-          {sortedProducts.length === 0 ? (
+          {loading ? (
+            <>
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div className="product-card skeleton" key={i}>
+                  <div className="product-image skeleton-image" />
+                  <div className="product-details">
+                    <div className="skeleton-text" style={{ width: '70%' }} />
+                    <div className="skeleton-text" style={{ width: '40%' }} />
+                    <div className="skeleton-text" style={{ width: '50%' }} />
+                  </div>
+                </div>
+              ))}
+            </>
+          ) : error ? (
+            <div className="empty-state">
+              <div className="empty-icon">⚠️</div>
+              <h3>Failed to load products</h3>
+              <p>{error}</p>
+            </div>
+          ) : sorted.length === 0 ? (
             <div className="empty-state">
               <div className="empty-icon">🔍</div>
               <h3>No products found</h3>
-              <p>Try adjusting your search or filters</p>
+              <p>Try adjusting filters or search</p>
               <button className="reset-btn" onClick={() => {
                 setActiveCategory("all");
                 setSearchQuery("");
@@ -237,25 +222,48 @@ export default function CustomerMarketplace({ user }) {
               </button>
             </div>
           ) : (
-            sortedProducts.map((product) => (
-              <div className="product-card" key={product.id}>
+            sorted.map((p) => (
+              <div className="product-card fancy" key={p._id || p.id}>
                 <div className="product-image">
-                  <img src={product.image} alt={product.name} />
-                  {!product.inStock && <div className="out-of-stock">Out of Stock</div>}
+                  {p.image ? <img src={p.image} alt={p.name} /> : <div className="empty-img">📦</div>}
+                  {p.grade && <div className={`grade-pill ${p.grade.toLowerCase()}`}>{p.grade}</div>}
+                  <div className="image-actions">
+                    <button className="view-btn" title="View">👁️</button>
+                    <button className="scan-btn" title="Scan image" onClick={() => openScan(p)}>🔎 Scan</button>
+                  </div>
                 </div>
                 <div className="product-details">
-                  <h3>{product.name}</h3>
-                  <p className="product-seller">by {product.seller}</p>
-                  <div className="product-rating">
-                    <span className="stars">{'★'.repeat(Math.floor(product.rating))}{'☆'.repeat(5 - Math.floor(product.rating))}</span>
-                    <span className="rating-count">({product.reviews})</span>
-                  </div>
-                  <p className="product-price">₹{product.price}/kg</p>
+                  <h3>{p.name}</h3>
+                  <p className="product-seller">Grade: {p.grade}</p>
+                  {p.address && <p className="product-seller">📍 {p.address}</p>}
+                  <p className="product-price">₹{p.price}/kg · {p.stock} kg</p>
                   <div className="product-actions">
-                    <button className="add-to-cart-btn" disabled={!product.inStock}>
-                      {product.inStock ? 'Add to Cart' : 'Notify Me'}
+                    <button className="add-to-cart-btn" onClick={async () => {
+                      try {
+                        await createCustomerOrder({ productId: p._id || p.id, quantity: 1 });
+                        alert('Order placed! Check My Orders.');
+                      } catch (e) {
+                        alert(e?.message || 'Failed to create order');
+                      }
+                    }}>Buy Now</button>
+                    <button className={`wishlist-btn ${wishlistIds.includes(String(p._id || p.id)) ? 'active' : ''}`}
+                      title={wishlistIds.includes(String(p._id || p.id)) ? 'Remove from wishlist' : 'Add to wishlist'}
+                      onClick={async () => {
+                        const id = String(p._id || p.id);
+                        try {
+                          if (wishlistIds.includes(id)) {
+                            const res = await removeFromWishlist(id);
+                            setWishlistIds((res.items || []).map(x => String(x._id || x.id)));
+                          } else {
+                            const res = await addToWishlist(id);
+                            setWishlistIds((res.items || []).map(x => String(x._id || x.id)));
+                          }
+                        } catch (e) {
+                          alert(e?.message || 'Wishlist action failed');
+                        }
+                      }}>
+                      {wishlistIds.includes(String(p._id || p.id)) ? '💔' : '❤️'}
                     </button>
-                    <button className="wishlist-btn">❤️</button>
                   </div>
                 </div>
               </div>
@@ -263,6 +271,42 @@ export default function CustomerMarketplace({ user }) {
           )}
         </div>
       </div>
+
+      {/* Scan Modal */}
+      {scanOpen && (
+        <div className="scan-modal-backdrop" onClick={() => setScanOpen(false)}>
+          <div className="scan-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="scan-modal-header">
+              <h3>Scan Product Image</h3>
+              <button className="close-btn" onClick={() => setScanOpen(false)}>✕</button>
+            </div>
+            <div className="scan-modal-body">
+              {scanTarget?.image ? (
+                <img src={scanTarget.image} alt={scanTarget.name} />
+              ) : (
+                <div className="empty-img" style={{ height: 240 }}>No image</div>
+              )}
+              <div className="scan-result">
+                {scanLoading ? (
+                  <span>Analyzing...</span>
+                ) : scanError ? (
+                  <span className="error-text">{scanError}</span>
+                ) : scanResult ? (
+                  <span><strong>Estimated Grade:</strong> {scanResult}</span>
+                ) : (
+                  <span>Click "Scan Quality" to analyze this photo.</span>
+                )}
+              </div>
+            </div>
+            <div className="scan-modal-actions">
+              <button className="btn-ghost" onClick={() => setScanOpen(false)}>Close</button>
+              <button className="btn-primary" onClick={runScan} disabled={scanLoading || !scanTarget?.image}>
+                {scanLoading ? "Scanning..." : "Scan Quality"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -30,7 +30,7 @@ export default function DashboardLayout({
       <aside className={`sidebar ${mobileMenuOpen ? 'mobile-open' : ''}`}>
         <div className="sidebar-header">
           <div className="logo">
-            <img src="/images/logo.png" alt="Cardo Logo" />
+            <img src="/images/cardooo1.jpg" alt="Cardo Logo" />
             <span>Cardo</span>
           </div>
           <button className="close-menu-btn" onClick={toggleMobileMenu}>×</button>

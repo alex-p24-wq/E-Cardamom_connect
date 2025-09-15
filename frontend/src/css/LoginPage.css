@@ -112,8 +112,14 @@
   background: #ffffff;
   font-size: 15px;
   line-height: 1.35;
+  color: #1f2937; /* Ensure visible text */
+  caret-color: #1f2937; /* Visible cursor */
   outline: none;
   transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.06s ease;
+}
+.input-group input::placeholder {
+  color: #94a3b8;
+  opacity: 1;
 }
 .input-group input:hover {
   border-color: #a5d6a7;
