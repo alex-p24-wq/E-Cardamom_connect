@@ -1,24 +1,74 @@
-/* Admin Dashboard Styles */
+/* Admin Dashboard Styles - modern greenery */
 
 .admin-dashboard {
   padding: 20px;
 }
+
+/* Animated hero banner with blob background */
+.welcome-banner {
+  position: relative;
+  color: white;
+  padding: 32px;
+  border-radius: 18px;
+  margin-bottom: 28px;
+  overflow: hidden;
+}
+.welcome-banner.admin-banner {
+  background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-primary-2) 45%, var(--brand-accent) 100%);
+  background-size: 200% 200%;
+  animation: gradientShift 14s ease infinite;
+}
+.welcome-banner::before, .welcome-banner::after {
+  content: "";
+  position: absolute;
+  width: 240px; height: 240px;
+  border-radius: 50%;
+  filter: blur(3px);
+  background: radial-gradient(closest-side, rgba(255,255,255,.18), transparent 60%);
+  animation: floatY 10s ease-in-out infinite;
+}
+.welcome-banner::before { top: -60px; left: -60px; }
+.welcome-banner::after { bottom: -60px; right: -60px; animation-delay: 1.2s; }
+
+.welcome-content h2 { margin: 0 0 8px 0; font-size: 28px; font-weight: 800; }
+.welcome-content p { margin: 0; font-size: 15px; opacity: .95; }
+.welcome-image img { width: 120px; height: 120px; border-radius: 16px; object-fit: cover; box-shadow: 0 8px 22px rgba(0,0,0,.18); }
+
+/* Elevation and hover */
+.dashboard-card { border-radius: 16px; box-shadow: var(--card-shadow-1); overflow: hidden; }
+.dashboard-card:hover { box-shadow: var(--card-shadow-2); }
+
+/* Subtle animated table header */
+.data-table thead th { background: var(--brand-soft); color: var(--brand-primary); position: sticky; top: 0; z-index: 1; }
+
+/* Buttons modernized */
+.view-all-btn { background: #2e7d32; color: #fff; border: none; padding: 8px 12px; border-radius: 10px; font-weight: 700; cursor: pointer; box-shadow: 0 6px 18px rgba(46,125,50,.22); transition: var(--elevate-transition); }
+.view-all-btn:hover { transform: translateY(-1px); filter: brightness(1.04); }
+
+/* Inputs */
+.card-content input, .card-content select, .card-content textarea { border: 1px solid #e2e8e4; border-radius: 10px; padding: 8px 10px; outline: none; transition: border-color .2s ease, box-shadow .2s ease; }
+.card-content input:focus, .card-content select:focus, .card-content textarea:focus { border-color: #9fd2a6; box-shadow: 0 0 0 3px rgba(76,175,80,.18); }
+
+/* Fade in major sections */
+.admin-dashboard > .welcome-banner { animation: fadeSlideUp .45s ease both; }
+.admin-dashboard > .stats-grid { animation: fadeSlideUp .45s ease .06s both; }
+.admin-dashboard > .dashboard-row { animation: fadeSlideUp .45s ease .12s both; }
 
 /* Welcome banner */
 .welcome-banner {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: linear-gradient(135deg, #0d47a1, #1976d2);
   color: white;
   padding: 30px;
   border-radius: 12px;
   margin-bottom: 30px;
+  background: linear-gradient(135deg, #1b5e20 0%, #43a047 50%, #a5d6a7 100%);
 }
 
 /* Extra modifier for admin */
 .admin-banner {
-  background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+  background: linear-gradient(135deg, #1b5e20 0%, #2e7d32 45%, #66bb6a 100%);
 }
 
 .welcome-content h2 {
@@ -141,8 +191,8 @@
 }
 
 .period-btn {
-  background: #e3f2fd;
-  color: #0d47a1;
+  background: #e8f5e9;
+  color: #1b5e20;
   border: none;
   padding: 6px 12px;
   border-radius: 6px;
@@ -151,9 +201,50 @@
 }
 
 .period-btn.active {
-  background: #1976d2;
+  background: #2e7d32;
   color: #fff;
 }
+
+/* Tables */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.data-table th, .data-table td {
+  border-bottom: 1px solid #e0e0e0;
+  padding: 10px 12px;
+  text-align: left;
+}
+.data-table thead th {
+  background: #f1f8e9;
+  color: #1b5e20;
+}
+
+/* Badges */
+.status-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.status-badge.pending { background: #fff8e1; color: #f57f17; }
+.status-badge.processing { background: #e3f2fd; color: #1565c0; }
+.status-badge.shipped { background: #e8f5e9; color: #2e7d32; }
+.status-badge.delivered { background: #e0f2f1; color: #00695c; }
+.status-badge.cancelled { background: #ffebee; color: #c62828; }
+
+.badge.role { padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 700; }
+.badge.role.customer { background: #e8f5e9; color: #2e7d32; }
+.badge.role.farmer { background: #fffde7; color: #f9a825; }
+.badge.role.agricare { background: #e3f2fd; color: #1565c0; }
+.badge.role.hub { background: #f3e5f5; color: #6a1b9a; }
+.badge.role.admin { background: #ffebee; color: #c62828; }
+
+.err-text { color: #c62828; font-weight: 600; }
+
+.quick-actions .view-all-btn { background: #2e7d32; color: #fff; }
+.quick-actions .view-all-btn:hover { background: #256628; }
 
 /* Responsive */
 @media (max-width: 992px) {

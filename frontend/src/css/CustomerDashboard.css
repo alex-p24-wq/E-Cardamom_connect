@@ -1,10 +1,10 @@
-/* Customer Dashboard Styles */
+/* Customer Dashboard Styles - modern accents, motion */
 
 /* Common styles */
 .customer-dashboard { width: 100%; }
 
 /* Wishlist professional styling */
-.wishlist-hero { display: flex; align-items: center; justify-content: space-between; background: linear-gradient(135deg, #6a11cb, #2575fc); color: #fff; border-radius: 16px; padding: 20px; box-shadow: 0 8px 24px rgba(37,117,252,0.25); margin-bottom: 16px; }
+.wishlist-hero { display: flex; align-items: center; justify-content: space-between; background: linear-gradient(135deg, var(--violet-start), var(--blue-end)); color: #fff; border-radius: 16px; padding: 20px; box-shadow: 0 8px 24px rgba(37,117,252,0.25); margin-bottom: 16px; background-size: 180% 180%; animation: gradientShift 14s ease infinite; }
 .wishlist-controls { display: flex; gap: 10px; align-items: center; }
 .wishlist-controls input { background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 8px 12px; min-width: 240px; }
 .wishlist-controls select { background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 8px 12px; }
@@ -174,6 +174,63 @@
 .add-to-cart-btn { width: 100%; padding: 6px 12px; background-color: #43a047; color: white; border: none; border-radius: 4px; font-size: 12px; font-weight: 600; cursor: pointer; transition: background-color 0.2s ease; }
 .add-to-cart-btn:hover { background-color: #2e7d32; }
 
+/* Profile (green-themed, rounded, shadows) */
+.customer-profile { display: flex; flex-direction: column; gap: 16px; }
+.profile-header { display: flex; align-items: center; justify-content: space-between; background: linear-gradient(135deg, #2e7d32, #43a047); border-radius: 16px; padding: 16px; color: #fff; box-shadow: 0 8px 24px rgba(46,125,50,0.25); }
+.profile-header-left { display: flex; align-items: center; gap: 12px; }
+.profile-avatar { width: 72px; height: 72px; border-radius: 50%; overflow: hidden; background: rgba(255,255,255,.2); border: 3px solid rgba(255,255,255,.35); display: grid; place-items: center; }
+.profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.avatar-placeholder { width: 100%; height: 100%; display: grid; place-items: center; font-size: 28px; font-weight: 800; color: #fff; }
+.profile-title h2 { margin: 0; font-size: 22px; }
+.profile-title p { margin: 2px 0 0 0; opacity: .95; }
+.profile-header-actions { display: flex; gap: 8px; }
+.edit-profile-btn { background: #fff; color: #2e7d32; border: none; border-radius: 10px; padding: 8px 12px; cursor: pointer; font-weight: 800; box-shadow: 0 4px 16px rgba(0,0,0,.12); }
+.edit-profile-btn:hover { transform: translateY(-1px); }
+.upload-btn { background: #1b5e20; color: #fff; border: none; border-radius: 10px; padding: 8px 12px; cursor: pointer; font-weight: 800; box-shadow: 0 4px 16px rgba(0,0,0,.12); }
+.upload-btn:hover { filter: brightness(1.05); }
+
+/* Alerts */
+.alert-success { background: #e8f5e9; color: #2e7d32; border: 1px solid #c8e6c9; border-radius: 12px; padding: 10px 12px; font-weight: 700; }
+.alert-error { background: #ffebee; color: #c62828; border: 1px solid #ffcdd2; border-radius: 12px; padding: 10px 12px; font-weight: 700; }
+
+/* Tabs */
+.profile-tabs { display: flex; gap: 8px; flex-wrap: wrap; }
+.profile-tab { background: #f5f7f9; border: none; padding: 8px 12px; border-radius: 999px; font-weight: 700; color: #2e7d32; cursor: pointer; }
+.profile-tab.active { background: #e8f5e9; box-shadow: inset 0 0 0 2px #2e7d32; }
+
+/* Content wrappers */
+.card-white { background: #fff; border-radius: 16px; box-shadow: 0 8px 20px rgba(0,0,0,0.06); padding: 16px; }
+.personal-info .edit-profile-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; background: #fff; border-radius: 16px; box-shadow: 0 8px 20px rgba(0,0,0,.06); padding: 16px; }
+.form-group { display: flex; flex-direction: column; gap: 6px; }
+.form-group.col-span-2 { grid-column: span 2; }
+.form-group label { font-weight: 700; color: #2e7d32; }
+.form-group input, .form-group textarea { background: #f5f7f9; border: 1px solid #e0e0e0; border-radius: 10px; padding: 10px 12px; outline: none; transition: box-shadow .15s ease, border-color .15s ease; }
+.form-group input:focus, .form-group textarea:focus { border-color: #2e7d32; box-shadow: 0 0 0 3px rgba(46,125,50,.15); }
+.field-error { color: #c62828; font-size: 12px; font-weight: 700; }
+.photo-actions { display: flex; gap: 8px; align-items: center; }
+
+.form-actions { grid-column: span 2; display: flex; gap: 8px; justify-content: flex-end; margin-top: 4px; }
+.save-btn { background: #2e7d32; color: #fff; border: none; border-radius: 10px; padding: 10px 14px; cursor: pointer; font-weight: 800; box-shadow: 0 6px 18px rgba(46,125,50,.25); }
+.save-btn:disabled { opacity: .7; cursor: not-allowed; }
+.cancel-btn { background: #fff; color: #2e7d32; border: 1px solid #2e7d32; border-radius: 10px; padding: 10px 14px; cursor: pointer; font-weight: 800; }
+
+/* Details view */
+.profile-details .detail-group { background: #fff; border: 1px solid #f1f1f1; border-radius: 12px; padding: 12px; margin-bottom: 10px; box-shadow: 0 4px 14px rgba(0,0,0,.04); }
+.profile-details .detail-group h3 { margin: 0 0 4px 0; color: #2e7d32; }
+
+/* Addresses and Payment */
+.addresses-section .addresses-list, .payment-section .payment-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+.address-card, .payment-card { background: #fff; border-radius: 12px; padding: 12px; box-shadow: 0 6px 20px rgba(0,0,0,.06); }
+.address-header, .payment-header { display: flex; align-items: center; justify-content: space-between; }
+.default-badge { background: #e8f5e9; color: #2e7d32; font-weight: 800; border-radius: 999px; padding: 4px 8px; }
+.address-actions, .payment-actions { display: flex; gap: 8px; margin-top: 10px; }
+.add-new-btn, .edit-btn, .delete-btn, .set-default-btn, .change-password-btn, .enable-2fa-btn { background: #2e7d32; color: #fff; border: none; border-radius: 10px; padding: 8px 12px; cursor: pointer; font-weight: 800; }
+.add-new-btn:hover, .edit-btn:hover, .delete-btn:hover, .set-default-btn:hover, .change-password-btn:hover, .enable-2fa-btn:hover { filter: brightness(1.05); }
+
+/* Fancy tint for header */
+.fancy-green { position: relative; overflow: hidden; }
+.fancy-green::after { content: ""; position: absolute; right: -40px; top: -40px; width: 140px; height: 140px; background: rgba(255,255,255,.15); border-radius: 50%; }
+
 /* Responsive */
 @media (max-width: 1200px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 992px) {
@@ -186,4 +243,6 @@
   .welcome-banner { flex-direction: column; text-align: center; gap: 16px; }
   .stats-grid { grid-template-columns: 1fr; }
   .product-grid { grid-template-columns: 1fr; }
+  .personal-info .edit-profile-form { grid-template-columns: 1fr; }
+  .form-group.col-span-2, .form-actions { grid-column: span 1; }
 }

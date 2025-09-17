@@ -52,7 +52,7 @@ const roleMeta = {
   },
 };
 
-const roles = Object.keys(roleMeta);
+const roles = Object.keys(roleMeta).filter((k) => k !== "admin");
 
 export default function RegisterPage() {
   const navigate = useNavigate();

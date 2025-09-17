@@ -29,6 +29,8 @@ const OrderSchema = new mongoose.Schema({
     postalCode: String,
     country: { type: String, default: 'IN' },
   },
+  paymentMethod: { type: String, enum: ['COD', 'UPI', 'CARD'], default: 'COD' },
+  paymentStatus: { type: String, enum: ['Pending', 'Paid', 'Failed'], default: 'Pending' },
   notes: String,
   // Optional tracking history
   tracking: [{

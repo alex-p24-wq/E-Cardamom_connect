@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import DashboardLayout from "./DashboardLayout";
 import "../../css/CustomerDashboard.css";
+import "../../css/theme-modern.css";
 
 // Dashboard components
 import CustomerOverview from "./customer/CustomerOverview";

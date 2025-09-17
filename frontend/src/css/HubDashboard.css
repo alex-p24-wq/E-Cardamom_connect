@@ -1,4 +1,4 @@
-/* Hub Manager Dashboard Styles */
+/* Hub Manager Dashboard Styles - teal theme */
 
 .hub-dashboard {
   padding: 20px;
@@ -8,11 +8,14 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: linear-gradient(135deg, #00897b, #26a69a);
   color: white;
   padding: 30px;
-  border-radius: 12px;
-  margin-bottom: 30px;
+  border-radius: 16px;
+  margin-bottom: 28px;
+  background: linear-gradient(135deg, var(--teal-start), var(--teal-end));
+  background-size: 180% 180%;
+  animation: gradientShift 14s ease infinite;
+  box-shadow: var(--card-shadow-1);
 }
 
 .welcome-content h2 {

@@ -52,8 +52,10 @@ function LoginPage() {
       localStorage.setItem("user", JSON.stringify(response.user));
       localStorage.setItem("token", response.token);
       
-      // Redirect to dashboard
-      navigate("/dashboard");
+      // Redirect back to intended page if provided, else dashboard
+      const params = new URLSearchParams(window.location.search);
+      const redirectTo = params.get("redirect");
+      navigate(redirectTo || "/dashboard", { replace: true });
     } catch (err) {
       setError(err.message || "Login failed. Please check your credentials.");
     } finally {

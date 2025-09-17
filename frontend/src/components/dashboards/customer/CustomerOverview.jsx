@@ -1,20 +1,99 @@
-import React from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import "../../../css/CustomerDashboard.css";
+import { getCustomerOrders, getWishlist } from "../../../services/api";
 
 export default function CustomerOverview({ user }) {
-  // Sample data for demonstration
-  const stats = [
-    { label: "Total Orders", value: 12, icon: "📦", color: "#4CAF50" },
-    { label: "Wishlist Items", value: 8, icon: "❤️", color: "#F44336" },
-    { label: "Cart Items", value: 3, icon: "🛒", color: "#2196F3" },
-    { label: "Saved Addresses", value: 2, icon: "📍", color: "#FF9800" },
-  ];
+  // Local, persisted profile and related counts
+  const [profile, setProfile] = useState(() => {
+    try {
+      const saved = localStorage.getItem("customerProfile");
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return { fullName: user?.profile?.fullName || "", email: user?.email || "" };
+  });
 
-  const recentOrders = [
-    { id: "ORD-001", date: "2023-05-15", status: "Delivered", total: 1250 },
-    { id: "ORD-002", date: "2023-05-10", status: "Processing", total: 850 },
-    { id: "ORD-003", date: "2023-05-05", status: "Shipped", total: 1500 },
-  ];
+  const [counts, setCounts] = useState({ orders: 0, wishlist: 0, cart: 0, addresses: 0 });
+  const [recentOrders, setRecentOrders] = useState([]);
+  const [loadingOrders, setLoadingOrders] = useState(true);
+
+  // Load dynamic data for stats + recent orders
+  useEffect(() => {
+    const loadOverview = async () => {
+      // Addresses from localStorage
+      let addresses = 0;
+      try {
+        const a = JSON.parse(localStorage.getItem("customerAddresses") || "[]");
+        addresses = Array.isArray(a) ? a.length : 0;
+      } catch {}
+
+      // Cart from localStorage (support a few common shapes)
+      let cart = 0;
+      try {
+        const raw =
+          localStorage.getItem("customerCart") ||
+          localStorage.getItem("cart") ||
+          localStorage.getItem("cartItems");
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) cart = parsed.length;
+          else if (Array.isArray(parsed?.items)) cart = parsed.items.length;
+          else if (typeof parsed === "number") cart = parsed;
+        }
+      } catch {}
+
+      // Wishlist via API (ignore errors if unauthenticated)
+      let wishlist = 0;
+      try {
+        const w = await getWishlist();
+        wishlist = Array.isArray(w?.items) ? w.items.length : 0;
+      } catch {
+        wishlist = 0;
+      }
+
+      // Orders via API
+      setLoadingOrders(true);
+      try {
+        const res = await getCustomerOrders({ page: 1, limit: 5 });
+        const totalOrders = typeof res?.counts?.All === "number" ? res.counts.All : (Array.isArray(res?.items) ? res.items.length : 0);
+        setRecentOrders(Array.isArray(res?.items) ? res.items.slice(0, 5) : []);
+        setCounts({ orders: totalOrders, wishlist, cart, addresses });
+      } catch {
+        setRecentOrders([]);
+        setCounts({ orders: 0, wishlist, cart, addresses });
+      } finally {
+        setLoadingOrders(false);
+      }
+    };
+
+    // Keep profile fresh from localStorage if it changes elsewhere
+    try {
+      const saved = localStorage.getItem("customerProfile");
+      if (saved) setProfile(JSON.parse(saved));
+    } catch {}
+
+    loadOverview();
+  }, [user?.id]);
+
+  const displayName = profile?.fullName?.trim() || user?.username || "User";
+
+  const stats = useMemo(() => [
+    { label: "Total Orders", value: counts.orders, icon: "📦", color: "#4CAF50" },
+    { label: "Wishlist Items", value: counts.wishlist, icon: "❤️", color: "#F44336" },
+    { label: "Cart Items", value: counts.cart, icon: "🛒", color: "#2196F3" },
+    { label: "Saved Addresses", value: counts.addresses, icon: "📍", color: "#FF9800" },
+  ], [counts]);
+
+  const formatCurrency = (amount, currency = "INR") => {
+    try {
+      return new Intl.NumberFormat("en-IN", { style: "currency", currency }).format(amount || 0);
+    } catch {
+      return `₹${amount || 0}`;
+    }
+  };
+
+  const humanDate = (d) => {
+    try { return new Date(d).toLocaleDateString(); } catch { return "-"; }
+  };
 
   const featuredProducts = [
     { id: 1, name: "Premium Cardamom", price: 450, image: "/images/plant11.jpeg" },
@@ -26,7 +105,7 @@ export default function CustomerOverview({ user }) {
     <div className="customer-overview">
       <div className="welcome-banner">
         <div className="welcome-content">
-          <h2>Welcome back, {user.username}!</h2>
+          <h2>Welcome back, {displayName}!</h2>
           <p>Here's what's happening with your account today.</p>
         </div>
         <div className="welcome-image">
@@ -56,30 +135,48 @@ export default function CustomerOverview({ user }) {
               <button className="view-all-btn">View All</button>
             </div>
             <div className="card-content">
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>Order ID</th>
-                    <th>Date</th>
-                    <th>Status</th>
-                    <th>Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {recentOrders.map((order) => (
-                    <tr key={order.id}>
-                      <td>{order.id}</td>
-                      <td>{order.date}</td>
-                      <td>
-                        <span className={`status-badge ${order.status.toLowerCase()}`}>
-                          {order.status}
-                        </span>
-                      </td>
-                      <td>₹{order.total}</td>
+              {loadingOrders ? (
+                <div className="empty-state">
+                  <div className="empty-icon">⏳</div>
+                  <h3>Loading your recent orders...</h3>
+                </div>
+              ) : recentOrders.length === 0 ? (
+                <div className="empty-state">
+                  <div className="empty-icon">🧺</div>
+                  <h3>No recent orders</h3>
+                  <p>Start shopping in the Marketplace to see them here.</p>
+                </div>
+              ) : (
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Order ID</th>
+                      <th>Date</th>
+                      <th>Status</th>
+                      <th>Total</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {recentOrders.map((order) => {
+                      const orderId = order._id || order.id;
+                      const total = order.amount ?? order.total;
+                      const currency = order.currency || "INR";
+                      return (
+                        <tr key={orderId}>
+                          <td>{String(orderId).slice(-6).toUpperCase()}</td>
+                          <td>{humanDate(order.createdAt || order.date)}</td>
+                          <td>
+                            <span className={`status-badge ${String(order.status || '').toLowerCase()}`}>
+                              {order.status || "-"}
+                            </span>
+                          </td>
+                          <td>{formatCurrency(total, currency)}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
             </div>
           </div>
         </div>

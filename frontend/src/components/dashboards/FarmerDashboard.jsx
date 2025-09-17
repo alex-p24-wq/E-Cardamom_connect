@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import DashboardLayout from "./DashboardLayout";
 import "../../css/FarmerDashboard.css";
+import "../../css/theme-modern.css";
 
 // Feature sections
 import FarmerProfile from "./farmer/FarmerProfile";

@@ -55,6 +55,18 @@ router.get('/products', async (req, res) => {
   }
 });
 
+// Public: get a product by id
+router.get('/products/:id', async (req, res) => {
+  try {
+    const product = await Product.findById(req.params.id);
+    if (!product) return res.status(404).json({ message: 'Product not found' });
+    res.json(product);
+  } catch (error) {
+    console.error('Get product error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // Authenticated: list customer's own orders
 // Query: status (optional), page, limit
 router.get('/orders', requireAuth, requireRole('customer'), async (req, res) => {
@@ -117,10 +129,10 @@ router.get('/orders/:id', requireAuth, requireRole('customer'), async (req, res)
 });
 
 // Authenticated: create an order for a single product (Buy Now)
-// body: { productId, quantity }
+// body: { productId, quantity, shippingAddress?, notes?, paymentMethod? }
 router.post('/orders', requireAuth, requireRole('customer'), async (req, res) => {
   try {
-    const { productId, quantity = 1 } = req.body || {};
+    const { productId, quantity = 1, shippingAddress, notes, paymentMethod } = req.body || {};
     if (!productId) return res.status(400).json({ message: 'productId is required' });
     const qty = Math.max(1, Number(quantity) || 1);
 
@@ -142,6 +154,10 @@ router.post('/orders', requireAuth, requireRole('customer'), async (req, res) =>
       amount,
       currency: 'INR',
       status: 'Pending',
+      shippingAddress: shippingAddress || undefined,
+      notes: notes || undefined,
+      paymentMethod: paymentMethod || 'COD',
+      paymentStatus: 'Pending',
     });
 
     // Optionally decrement stock

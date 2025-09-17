@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import api from "../../../services/api";
-import { addToWishlist, removeFromWishlist, getWishlist, createCustomerOrder } from "../../../services/api";
+import { addToWishlist, removeFromWishlist, getWishlist } from "../../../services/api";
 import "../../../css/CustomerDashboard.css";
 
 export default function CustomerMarketplace({ user }) {
@@ -132,6 +133,8 @@ export default function CustomerMarketplace({ user }) {
     }
   };
 
+  const navigate = useNavigate();
+
   return (
     <div className="customer-marketplace">
       {/* Hero */}
@@ -238,13 +241,9 @@ export default function CustomerMarketplace({ user }) {
                   {p.address && <p className="product-seller">📍 {p.address}</p>}
                   <p className="product-price">₹{p.price}/kg · {p.stock} kg</p>
                   <div className="product-actions">
-                    <button className="add-to-cart-btn" onClick={async () => {
-                      try {
-                        await createCustomerOrder({ productId: p._id || p.id, quantity: 1 });
-                        alert('Order placed! Check My Orders.');
-                      } catch (e) {
-                        alert(e?.message || 'Failed to create order');
-                      }
+                    <button className="add-to-cart-btn" onClick={() => {
+                      const id = p._id || p.id;
+                      navigate(`/checkout/${id}`);
                     }}>Buy Now</button>
                     <button className={`wishlist-btn ${wishlistIds.includes(String(p._id || p.id)) ? 'active' : ''}`}
                       title={wishlistIds.includes(String(p._id || p.id)) ? 'Remove from wishlist' : 'Add to wishlist'}

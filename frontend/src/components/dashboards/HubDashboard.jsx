@@ -1,6 +1,7 @@
 import React from "react";
 import DashboardLayout from "./DashboardLayout";
 import "../../css/HubDashboard.css";
+import "../../css/theme-modern.css";
 
 export default function HubDashboard({ user }) {
   // Menu items for hub dashboard

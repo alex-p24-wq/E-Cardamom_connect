@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "../../css/DashboardLayout.css";
+import "../../css/theme-modern.css";
 
 export default function DashboardLayout({ 
   user, 
