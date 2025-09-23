@@ -9,7 +9,7 @@ import ProductManager from "./farmer/ProductManager";
 import CardamomGrading from "./farmer/CardamomGrading";
 import DiseasePredictor from "./farmer/DiseasePredictor";
 import ConnectAgriCare from "./farmer/ConnectAgriCare";
-import FarmerFeedback from "./farmer/FarmerFeedback";
+import FeedbackForm from "./shared/FeedbackForm";
 
 export default function FarmerDashboard({ user }) {
   const [activePage, setActivePage] = useState("overview");
@@ -107,7 +107,7 @@ export default function FarmerDashboard({ user }) {
       case "agricare":
         return <ConnectAgriCare />;
       case "feedback":
-        return <FarmerFeedback />;
+        return <FeedbackForm title="Farmer Feedback" />;
       case "profile":
         return <FarmerProfile user={user} />;
       default:

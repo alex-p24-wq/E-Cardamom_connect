@@ -160,7 +160,7 @@ router.post('/orders', requireAuth, requireRole('customer'), async (req, res) =>
       paymentStatus: 'Pending',
     });
 
-    // Optionally decrement stock
+    // Decrement stock immediately to lock inventory and avoid shipping of deleted products
     try {
       product.stock = Math.max(0, (product.stock || 0) - qty);
       await product.save();

@@ -1,9 +1,14 @@
 import React, { useEffect, useState } from "react";
 import api from "../../../services/api";
-import "../../../css/FarmerDashboard.css";
+import { useNotifications } from "../../../contexts/NotificationContext";
+import { notificationTemplates, createErrorNotification } from "../../../utils/notifications";
+import "../../../css/CardamomComponents.css";
+import "../../../css/FarmerComponents.css";
 
 // Manage products to sell (persisted in database)
 export default function ProductManager() {
+  const { addNotification } = useNotifications();
+  
   const emptyForm = {
     name: "",
     price: "",
@@ -17,6 +22,8 @@ export default function ProductManager() {
 
   const [products, setProducts] = useState([]);
   const [form, setForm] = useState(emptyForm);
+  const [file, setFile] = useState(null); // image file
+  const [previewUrl, setPreviewUrl] = useState("");
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
   const [error, setError] = useState("");
@@ -43,28 +50,70 @@ export default function ProductManager() {
     setForm((f) => ({ ...f, [name]: value }));
   };
 
-  const resetForm = () => setForm(emptyForm);
+  const handleFileChange = (e) => {
+    const f = e.target.files?.[0];
+    setFile(f || null);
+    if (f) {
+      const url = URL.createObjectURL(f);
+      setPreviewUrl(url);
+    } else {
+      setPreviewUrl("");
+    }
+  };
+
+  const resetForm = () => {
+    setForm(emptyForm);
+    setFile(null);
+    setPreviewUrl("");
+  };
 
   const addProduct = async (e) => {
     e.preventDefault();
     setError("");
     setAdding(true);
     try {
-      const payload = {
-        name: form.name.trim(),
-        price: Number(form.price),
-        stock: Number(form.stock),
-        grade: form.grade,
-        image: form.image?.trim() || undefined,
-        address: form.address?.trim() || undefined,
-        experienceYears: form.experienceYears ? Number(form.experienceYears) : undefined,
-        description: form.description?.trim() || undefined,
-      };
-      const { data: created } = await api.post("/farmer/products", payload);
+      // Use multipart/form-data when a file is selected
+      let created;
+      if (file) {
+        const formData = new FormData();
+        formData.append('name', form.name.trim());
+        formData.append('price', String(Number(form.price)));
+        formData.append('stock', String(Number(form.stock)));
+        formData.append('grade', form.grade);
+        if (form.address) formData.append('address', form.address.trim());
+        if (form.experienceYears) formData.append('experienceYears', String(Number(form.experienceYears)));
+        if (form.description) formData.append('description', form.description.trim());
+        formData.append('image', file); // field name must be 'image'
+
+        const res = await api.post("/farmer/products", formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+        created = res.data;
+      } else {
+        // Fallback to JSON if no file (still supports URL)
+        const payload = {
+          name: form.name.trim(),
+          price: Number(form.price),
+          stock: Number(form.stock),
+          grade: form.grade,
+          image: form.image?.trim() || undefined,
+          address: form.address?.trim() || undefined,
+          experienceYears: form.experienceYears ? Number(form.experienceYears) : undefined,
+          description: form.description?.trim() || undefined,
+        };
+        const res = await api.post("/farmer/products", payload);
+        created = res.data;
+      }
+
       setProducts((list) => [created, ...list]);
       resetForm();
+      
+      // Show success notification
+      addNotification(notificationTemplates.productAdded(form.name));
     } catch (e) {
-      setError(e?.response?.data?.message || e?.message || "Failed to add product");
+      const errorMessage = e?.response?.data?.message || e?.message || "Failed to add product";
+      setError(errorMessage);
+      addNotification(createErrorNotification("Failed to Add Product", errorMessage));
     } finally {
       setAdding(false);
     }
@@ -75,8 +124,16 @@ export default function ProductManager() {
     try {
       await api.delete(`/farmer/products/${id}`);
       setProducts((list) => list.filter((p) => (p._id || p.id) !== id));
+      addNotification({
+        type: 'success',
+        title: 'Product Removed',
+        message: 'Product has been successfully removed from the marketplace.',
+        icon: '🗑️'
+      });
     } catch (e) {
-      setError(e?.response?.data?.message || e?.message || "Failed to delete");
+      const errorMessage = e?.response?.data?.message || e?.message || "Failed to delete";
+      setError(errorMessage);
+      addNotification(createErrorNotification("Failed to Remove Product", errorMessage));
     }
   };
 
@@ -89,8 +146,8 @@ export default function ProductManager() {
         {/* Decorative and friendly hero */}
         <div className="pm-hero">
           <div>
-            <h2 className="pm-hero-title">Add your fresh cardamom for sale</h2>
-            <p className="pm-hero-sub">Fill the details below. A live preview will update as you type.</p>
+            <h2 className="pm-hero-title">🌿 Share Your Cardamom Harvest</h2>
+            <p className="pm-hero-sub">Connect with buyers and showcase your premium cardamom. Fill the details below and watch your product come to life.</p>
           </div>
         </div>
 
@@ -99,7 +156,7 @@ export default function ProductManager() {
           <form onSubmit={addProduct} className="pm-form">
             <div className="pm-field">
               <label>Product Name</label>
-              <input name="name" value={form.name} onChange={handleChange} placeholder="e.g., Cardamom" required />
+              <input name="name" value={form.name} onChange={handleChange} required />
             </div>
             <div className="pm-field">
               <label>Price (₹/kg)</label>
@@ -119,15 +176,17 @@ export default function ProductManager() {
             </div>
             <div className="pm-field">
               <label>Farmer Address</label>
-              <input name="address" value={form.address} onChange={handleChange} placeholder="e.g., Idukki, Kerala" />
+              <input name="address" value={form.address} onChange={handleChange} />
             </div>
             <div className="pm-field">
               <label>Years of Experience</label>
               <input type="number" name="experienceYears" value={form.experienceYears} onChange={handleChange} min="0" placeholder="e.g., 5" />
             </div>
             <div className="pm-field pm-col-span-2">
-              <label>Image URL</label>
-              <input name="image" value={form.image} onChange={handleChange} placeholder="/images/plant12.jpeg" />
+              <label>Image (upload from device)</label>
+              <input type="file" accept="image/*" onChange={handleFileChange} />
+              <div style={{ fontSize: 12, color: '#607d8b', marginTop: 4 }}>Or paste an image URL below (optional)</div>
+              <input name="image" value={form.image} onChange={handleChange} placeholder="https://..." />
             </div>
             <div className="pm-field pm-col-span-2">
               <label>Description</label>
@@ -145,7 +204,9 @@ export default function ProductManager() {
             <h4 className="pm-right-title">Live Preview</h4>
             <div className="pm-preview-card">
               <div className="pm-preview-image">
-                {form.image ? (
+                {previewUrl ? (
+                  <img src={previewUrl} alt={form.name || 'Product'} />
+                ) : form.image ? (
                   <img src={form.image} alt={form.name || 'Product'} />
                 ) : (
                   <div className="empty-img">📦</div>

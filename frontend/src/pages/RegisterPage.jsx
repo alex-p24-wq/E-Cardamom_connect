@@ -3,7 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Eye, EyeOff, CheckCircle, AlertCircle, User, Mail, Phone, Lock, FileText, MapPin, Building, Shield } from "lucide-react";
 import "../css/RegisterPage.css";
-import { registerUser, sendEmailOtp, verifyEmailOtp } from "../services/api";
+import { registerUser, sendEmailOtp, verifyEmailOtp, loginWithGoogle } from "../services/api";
+import { signInWithGoogle } from "../services/googleAuth";
 import { 
   validateUsername, 
   validateEmail, 
@@ -59,6 +60,7 @@ export default function RegisterPage() {
   const [activeRole, setActiveRole] = useState("customer");
   const [step, setStep] = useState(1); // 1: Account, 2: Details, 3: Review
   const [showPassword, setShowPassword] = useState(false);
+  const [showRoleModal, setShowRoleModal] = useState(false);
   const [form, setForm] = useState({ username: "", email: "", phone: "", password: "", confirm: "" });
   const [roleData, setRoleData] = useState({});
   const [isLoading, setIsLoading] = useState(false);
@@ -116,7 +118,7 @@ export default function RegisterPage() {
       { name: "fullName", label: "Full Name", type: "text", col: 2 },
       { name: "farmLocation", label: "Farm Location", type: "text", col: 2 },
       { name: "farmSize", label: "Farm Size (acres)", type: "number" },
-      { name: "idProof", label: "ID Proof (PDF/Image)", type: "file", accept: ".pdf,.png,.jpg,.jpeg" },
+      { name: "idProof", label: "ID Proof (PDF/Image)", type: "file", accept: ".pdf,.png,.jpg,.jpeg", required: true },
       { name: "notes", label: "Notes (optional)", type: "textarea", col: 2 },
     ],
     agricare: [
@@ -312,6 +314,65 @@ export default function RegisterPage() {
             >
               Join Cardo — tailored experience for your role
             </motion.p>
+
+
+            {showRoleModal && (
+              <div
+                role="dialog"
+                aria-modal="true"
+                aria-label="Choose your role"
+                style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}
+                onClick={() => !isLoading && setShowRoleModal(false)}
+              >
+                <div
+                  style={{ background: '#fff', borderRadius: 12, width: 'min(440px, 92vw)', padding: 20, boxShadow: '0 12px 40px rgba(0,0,0,0.25)' }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <h3 style={{ margin: 0, marginBottom: 12, color: '#2e7d32', fontSize: 20, fontWeight: 800 }}>Continue as</h3>
+                  <p style={{ marginTop: 0, color: '#37474f', marginBottom: 16, fontSize: 14 }}>Choose your role to personalize your dashboard.</p>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                    {roles.map((key) => (
+                      <button
+                        key={key}
+                        disabled={isLoading}
+                        onClick={async () => {
+                          setApiError(null);
+                          try {
+                            // Clear any existing session first
+                            localStorage.removeItem('user');
+                            localStorage.removeItem('token');
+
+                            setActiveRole(key);
+                            const { idToken } = await signInWithGoogle();
+                            const resp = await loginWithGoogle(idToken, key);
+                            if (resp && resp.token) {
+                              localStorage.setItem('token', resp.token);
+                              localStorage.setItem('user', JSON.stringify(resp.user));
+                              setShowRoleModal(false);
+                              navigate('/dashboard', { replace: true });
+                            }
+                          } catch (err) {
+                            setApiError(err?.message || 'Google sign-up failed');
+                          }
+                        }}
+                        style={{ padding: 12, borderRadius: 10, border: '1px solid #cfd8dc', background: '#fff', cursor: 'pointer', color: '#1f2937', fontWeight: 700, textAlign: 'center' }}
+                      >
+                        {roleMeta[key].label}
+                      </button>
+                    ))}
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 14 }}>
+                    <button
+                      disabled={isLoading}
+                      onClick={() => setShowRoleModal(false)}
+                      style={{ padding: '10px 12px', borderRadius: 10, border: '1px solid #cfd8dc', background: '#fff', cursor: 'pointer', color: '#1f2937', fontWeight: 600 }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
             
             <AnimatePresence>
               {apiError && (
@@ -362,6 +423,19 @@ export default function RegisterPage() {
                 );
               })}
             </motion.div>
+
+            <div className="divider" style={{ marginTop: 8 }}><span>or continue with</span></div>
+            <div className="social-login" style={{ marginTop: 0 }}>
+              <button
+                type="button"
+                className="social-btn google-btn"
+                disabled={isLoading}
+                onClick={() => setShowRoleModal(true)}
+              >
+                <img src="https://www.svgrepo.com/show/355037/google.svg" alt="Google" />
+                Sign up with Google
+              </button>
+            </div>
 
             <motion.div 
               className="progress" 
@@ -723,7 +797,7 @@ export default function RegisterPage() {
                       ))}
                     </select>
                   ) : (
-                    <input id={f.name} name={f.name} type={f.type} accept={f.accept} placeholder={`Enter ${f.label.toLowerCase()}`} value={f.type === "file" ? undefined : (roleData[f.name] ?? "")} onChange={onRoleInput} onBlur={onRoleBlur} />
+                    <input id={f.name} name={f.name} type={f.type} accept={f.accept} placeholder={`Enter ${f.label.toLowerCase()}`} value={f.type === "file" ? undefined : (roleData[f.name] ?? "")} onChange={onRoleInput} onBlur={onRoleBlur} required={Boolean(f.required)} />
                   )}
                   {f.type === "file" && <div className="file-note">Accepted: PDF/PNG/JPG. Max 5MB.</div>}
                   <AnimatePresence>

@@ -2,6 +2,7 @@
 // Uses provided Firebase config and (optionally) App Check with reCAPTCHA v3
 
 import { initializeApp, getApps } from "firebase/app";
+import { getAuth } from "firebase/auth"; // Export auth for Google Sign-In
 
 // Prefer environment variables if provided (Vite), fallback to the given constants
 const firebaseConfig = {
@@ -16,6 +17,9 @@ const firebaseConfig = {
 
 // Initialize (avoid duplicate init during HMR)
 const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
+
+// Export Firebase Auth instance for use in Google Sign-In
+export const auth = getAuth(app);
 
 let appCheckInitialized = false;
 let appCheckInstance = null;

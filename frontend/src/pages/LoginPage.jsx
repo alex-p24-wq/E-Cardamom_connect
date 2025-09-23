@@ -1,8 +1,9 @@
 import React, { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { loginUser } from "../services/api";
+import { loginUser, loginWithGoogle } from "../services/api";
 import "../css/LoginPage.css";
 import { validateUsername, validatePassword } from "../utils/validation";
+import { signInWithGoogle } from "../services/googleAuth";
 
 
 function LoginPage() {
@@ -123,7 +124,33 @@ function LoginPage() {
 
           {/* Social Logins */}
           <div className="social-login">
-            <button className="social-btn google-btn" disabled={loading}>
+            <button 
+              type="button"
+              className="social-btn google-btn" 
+              disabled={loading}
+              onClick={async () => {
+                setError("");
+                setLoading(true);
+                try {
+                  const { user, idToken } = await signInWithGoogle();
+                  // Exchange Google ID token for app JWT (matches registered email and role on server)
+                  const resp = await loginWithGoogle(idToken);
+
+                  // Store server-issued JWT and user
+                  localStorage.setItem("user", JSON.stringify(resp.user));
+                  localStorage.setItem("token", resp.token);
+
+                  const params = new URLSearchParams(window.location.search);
+                  const redirectTo = params.get("redirect");
+                  navigate(redirectTo || "/dashboard", { replace: true });
+                } catch (err) {
+                  console.error("Google sign-in failed:", err);
+                  setError(err?.message || "Google sign-in failed");
+                } finally {
+                  setLoading(false);
+                }
+              }}
+            >
               <img
                 src="https://www.svgrepo.com/show/355037/google.svg"
                 alt="Google"

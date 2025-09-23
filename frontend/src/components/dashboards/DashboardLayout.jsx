@@ -1,7 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import "../../css/DashboardLayout.css";
-import "../../css/theme-modern.css";
+import { logout } from "../../services/auth";
+import { useNavigationBlock } from "../../hooks/useNavigationBlock";
+import { useConfirmation } from "../../contexts/ConfirmationContext";
+import NotificationDropdown from "../notifications/NotificationDropdown";
+import "../../css/CardamomDashboard.css";
 
 export default function DashboardLayout({ 
   user, 
@@ -14,12 +17,41 @@ export default function DashboardLayout({
   const navigate = useNavigate();
   const [activePage, setActivePage] = useState(menuItems[0]?.id || "overview");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { showConfirmation } = useConfirmation();
 
-  const handleLogout = () => {
-    localStorage.removeItem("user");
-    localStorage.removeItem("token");
-    navigate("/login");
+  // Enable navigation blocking for dashboard pages
+  useNavigationBlock(true);
+
+  const handleLogout = async () => {
+    const confirmed = await showConfirmation({
+      title: "Logout Confirmation",
+      message: "Are you sure you want to logout? You will be redirected to the login page.",
+      confirmText: "Yes, Logout",
+      cancelText: "Cancel",
+      type: "info",
+      icon: "👋"
+    });
+
+    if (confirmed) {
+      await logout(); // clear local state (and firebase if present)
+      navigate("/login", { replace: true });
+    }
   };
+
+  // Listen for force logout events from navigation blocking
+  useEffect(() => {
+    const handleForceLogout = async () => {
+      // Direct logout without confirmation (already confirmed in navigation block)
+      await logout();
+      navigate("/login", { replace: true });
+    };
+
+    window.addEventListener('forceLogout', handleForceLogout);
+    
+    return () => {
+      window.removeEventListener('forceLogout', handleForceLogout);
+    };
+  }, [navigate]);
 
   const toggleMobileMenu = () => {
     setMobileMenuOpen(!mobileMenuOpen);
@@ -82,10 +114,7 @@ export default function DashboardLayout({
           </button>
           <h1>{pageTitle}</h1>
           <div className="header-actions">
-            <button className="notification-btn">
-              🔔
-              <span className="badge">3</span>
-            </button>
+            <NotificationDropdown />
             <button className="profile-btn" onClick={() => setActivePage("profile")}>
               <div className="avatar-small">{user.username.charAt(0).toUpperCase()}</div>
             </button>

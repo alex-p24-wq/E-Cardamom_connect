@@ -1,11 +1,16 @@
-  import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import { getProductById, createCustomerOrder } from "../services/api";
+import { useNavigationBlock } from "../hooks/useNavigationBlock";
+import { logout } from "../services/auth";
 import "../css/CheckoutPage.css";
 
 export default function CheckoutPage() {
   const navigate = useNavigate();
   const { productId } = useParams();
+
+  // Enable navigation blocking for checkout page
+  useNavigationBlock(true);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -25,6 +30,20 @@ export default function CheckoutPage() {
   const [paymentMethod, setPaymentMethod] = useState("COD"); // COD | UPI | CARD
   const [notes, setNotes] = useState("");
   const [placing, setPlacing] = useState(false);
+
+  // Handle force logout from navigation blocking
+  useEffect(() => {
+    const handleForceLogout = async () => {
+      await logout();
+      navigate("/login", { replace: true });
+    };
+
+    window.addEventListener('forceLogout', handleForceLogout);
+    
+    return () => {
+      window.removeEventListener('forceLogout', handleForceLogout);
+    };
+  }, [navigate]);
 
   // Auth gate: redirect to login if not authenticated, and preserve return URL
   useEffect(() => {

@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import DashboardLayout from "./DashboardLayout";
 import "../../css/AgriCareDashboard.css";
 import "../../css/theme-modern.css";
+import FeedbackForm from "./shared/FeedbackForm";
 
 export default function AgriCareDashboard({ user }) {
   // Sidebar menu for AgriCare
@@ -11,6 +12,7 @@ export default function AgriCareDashboard({ user }) {
     { id: "orders", label: "Orders", icon: "🛒" },
     { id: "farmers", label: "Farmers", icon: "👨‍🌾" },
     { id: "analytics", label: "Analytics", icon: "📈" },
+    { id: "feedback", label: "Feedback", icon: "💬" },
     { id: "profile", label: "Profile", icon: "👤" },
   ];
 
@@ -418,6 +420,7 @@ export default function AgriCareDashboard({ user }) {
       case "orders": return renderOrders();
       case "farmers": return renderFarmers();
       case "analytics": return renderAnalytics();
+      case "feedback": return <FeedbackForm title="AgriCare Feedback" />;
       case "profile": return renderProfile();
       case "overview":
       default: return renderOverview();

@@ -19,6 +19,13 @@ import {
 } from "../../services/api";
 import "../../css/AdminDashboard.css";
 import "../../css/theme-modern.css";
+import "../../css/ui.css";
+import { Card, CardHeader, CardContent, StatCard } from "../ui/Card";
+import Filters from "../ui/Filters";
+import SearchBar from "../ui/SearchBar";
+import QuickActions from "../ui/QuickActions";
+import AreaLineChart from "../charts/AreaLineChart";
+import AdminFeedbackTable from "../reports/AdminFeedbackTable";
 
 export default function AdminDashboard({ user }) {
   const menuItems = [
@@ -104,74 +111,53 @@ export default function AdminDashboard({ user }) {
     catch { return `₹${n || 0}`; }
   };
 
+  // Global dashboard filters
+  const [region, setRegion] = useState("");
+  const [period, setPeriod] = useState("30d");
+  const [variety, setVariety] = useState("");
+
   const renderOverview = () => (
     <div className="admin-dashboard">
-      <div className="welcome-banner admin-banner green">
-        <div className="welcome-content">
-          <h2>Welcome back, {user.username}!</h2>
-          <p>Monitor the whole platform at a glance.</p>
-        </div>
-        <div className="welcome-image">
-          <img src="/images/plant15.jpeg" alt="Welcome" />
-        </div>
-      </div>
+      <Card className="blob-bg">
+        <CardHeader title={`Welcome back, ${user.username}!`} subtitle="Monitor the whole platform at a glance." 
+          actions={(
+            <Filters 
+              region={region} setRegion={setRegion}
+              period={period} setPeriod={setPeriod}
+              variety={variety} setVariety={setVariety}
+              onApply={() => {/* hook for future data fetch */}}
+            />
+          )}
+        />
+        <CardContent>
+          <div className="grid-auto">
+            <StatCard icon="👥" value={summary.users} label="Total Users" accent="#2e7d32" />
+            <StatCard icon="📦" value={summary.products} label="Active Products" accent="#43a047" />
+            <StatCard icon="🛒" value={summary.orders} label="Total Orders" accent="#66bb6a" />
+            <StatCard icon="💰" value={formatCurrency(0)} label="Revenue (demo)" accent="#81c784" />
+          </div>
+        </CardContent>
+      </Card>
 
-      <div className="stats-grid">
-        <div className="stat-card">
-          <div className="stat-icon" style={{ backgroundColor: "#2e7d32" }}>👥</div>
-          <div className="stat-details">
-            <h3>{summary.users}</h3>
-            <p>Total Users</p>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-icon" style={{ backgroundColor: "#43a047" }}>📦</div>
-          <div className="stat-details">
-            <h3>{summary.products}</h3>
-            <p>Active Products</p>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-icon" style={{ backgroundColor: "#66bb6a" }}>🛒</div>
-          <div className="stat-details">
-            <h3>{summary.orders}</h3>
-            <p>Total Orders</p>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-icon" style={{ backgroundColor: "#81c784" }}>💰</div>
-          <div className="stat-details">
-            <h3>{formatCurrency(0)}</h3>
-            <p>Revenue (demo)</p>
-          </div>
-        </div>
-      </div>
-
-      <div className="dashboard-row">
-        <div className="dashboard-col">
-          <div className="dashboard-card">
-            <div className="card-header">
-              <h3>Quick Actions</h3>
-            </div>
-            <div className="card-content">
-              <div className="quick-actions">
-                <button className="view-all-btn" onClick={() => setActive("users")}>Manage Users</button>
-                <button className="view-all-btn" onClick={() => setActive("products")} style={{ marginLeft: 8 }}>Manage Products</button>
-                <button className="view-all-btn" onClick={() => setActive("orders")} style={{ marginLeft: 8 }}>Manage Orders</button>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="dashboard-col">
-          <div className="dashboard-card">
-            <div className="card-header">
-              <h3>System Notes</h3>
-            </div>
-            <div className="card-content">
-              <p>Use the side menu to explore all modules. Data is protected and admin-only.</p>
-            </div>
-          </div>
-        </div>
+      <div style={{ marginTop: 16 }} className="grid-2">
+        <Card>
+          <CardHeader title="Performance" subtitle="Recent orders trend" 
+            actions={<SearchBar value={productQuery} onChange={setProductQuery} onSubmit={fetchProducts} placeholder="Search products..." />}
+          />
+          <CardContent>
+            <AreaLineChart color="#43a047" data={[{x:1,y:12},{x:2,y:9},{x:3,y:15},{x:4,y:13},{x:5,y:18},{x:6,y:14},{x:7,y:22}]} />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader title="Quick Actions" />
+          <CardContent>
+            <QuickActions actions={[
+              { label: 'Manage Users', onClick: () => setActive('users') },
+              { label: 'Manage Products', onClick: () => setActive('products') },
+              { label: 'Manage Orders', onClick: () => setActive('orders') },
+            ]} />
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
@@ -348,7 +334,10 @@ export default function AdminDashboard({ user }) {
                         <input
                           type="number"
                           min={0}
+                          className="no-spin"
                           value={p.price}
+                          disabled={p?.user?.role === 'farmer'}
+                          title={p?.user?.role === 'farmer' ? 'Price is controlled by the farmer' : 'Edit price'}
                           onChange={async (e) => {
                             const next = Math.max(0, Number(e.target.value) || 0);
                             try {
@@ -463,9 +452,9 @@ export default function AdminDashboard({ user }) {
   const renderReports = () => (
     <div className="admin-dashboard">
       <div className="dashboard-card">
-        <div className="card-header"><h3>Reports</h3></div>
+        <div className="card-header"><h3>Feedback Reports</h3></div>
         <div className="card-content">
-          <p>Coming soon: revenue trends, user growth, order funnel.</p>
+          <AdminFeedbackTable />
         </div>
       </div>
     </div>

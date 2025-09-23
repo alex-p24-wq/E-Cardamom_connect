@@ -3,6 +3,7 @@ import User from "../models/User.js";
 import Product from "../models/Product.js";
 import Order from "../models/Order.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
+import Feedback from "../models/Feedback.js";
 
 const router = express.Router();
 
@@ -94,14 +95,25 @@ router.get('/products', async (req, res) => {
   }
 });
 
-// Products: update fields
+// Products: update fields (admin cannot change price if owner is a farmer)
 router.patch('/products/:id', async (req, res) => {
   try {
     const allowed = ['name', 'price', 'stock', 'grade', 'image', 'address', 'description'];
-    const update = {};
-    for (const k of allowed) if (k in req.body) update[k] = req.body[k];
+    const incoming = {};
+    for (const k of allowed) if (k in req.body) incoming[k] = req.body[k];
+
+    // Load product + owner role to enforce price restriction
+    const current = await Product.findById(req.params.id).populate('user', 'role');
+    if (!current) return res.status(404).json({ message: 'Product not found' });
+
+    const isFarmerOwner = String(current?.user?.role) === 'farmer';
+    const update = { ...incoming };
+    if (isFarmerOwner && 'price' in update) {
+      // Block price change
+      return res.status(400).json({ message: 'Admins cannot change price of farmer-owned products' });
+    }
+
     const product = await Product.findByIdAndUpdate(req.params.id, update, { new: true });
-    if (!product) return res.status(404).json({ message: 'Product not found' });
     res.json({ message: 'Product updated', product });
   } catch (error) {
     console.error('Update product error:', error);
@@ -129,12 +141,32 @@ router.get('/orders', async (req, res) => {
   }
 });
 
-// Orders: update status or paymentStatus
+// Orders: update status or paymentStatus (block changes if any product is deleted)
 router.patch('/orders/:id', async (req, res) => {
   try {
     const allowed = ['status', 'paymentStatus', 'notes'];
     const update = {};
     for (const k of allowed) if (k in req.body) update[k] = req.body[k];
+
+    // Always validate product existence before any status change
+    if ('status' in update) {
+      const orderDoc = await Order.findById(req.params.id).select('items status');
+      if (!orderDoc) return res.status(404).json({ message: 'Order not found' });
+
+      // Block any status change if order is already Cancelled
+      if (String(orderDoc.status) === 'Cancelled' && update.status !== 'Cancelled') {
+        return res.status(400).json({ message: 'Cannot change status: order is cancelled' });
+      }
+
+      const productIds = (orderDoc.items || []).map(i => i.product).filter(Boolean);
+      if (productIds.length) {
+        const existingCount = await Product.countDocuments({ _id: { $in: productIds } });
+        if (existingCount !== productIds.length) {
+          return res.status(400).json({ message: 'Cannot change status: one or more products were deleted' });
+        }
+      }
+    }
+
     const order = await Order.findByIdAndUpdate(req.params.id, update, { new: true });
     if (!order) return res.status(404).json({ message: 'Order not found' });
     res.json({ message: 'Order updated', order });
@@ -224,14 +256,57 @@ router.post('/products', async (req, res) => {
   }
 });
 
-// Products: delete
+// Products: delete (guard against active orders)
 router.delete('/products/:id', async (req, res) => {
   try {
-    const product = await Product.findByIdAndDelete(req.params.id);
+    const product = await Product.findById(req.params.id);
     if (!product) return res.status(404).json({ message: 'Product not found' });
+
+    // Block deletion if there are active (Pending/Processing) orders referencing this product
+    const hasActiveOrders = await Order.exists({
+      'items.product': product._id,
+      status: { $in: ['Pending', 'Processing'] }
+    });
+    if (hasActiveOrders) {
+      return res.status(400).json({
+        message: 'Cannot delete product with active orders. Cancel or complete those orders first.'
+      });
+    }
+
+    await Product.findByIdAndDelete(product._id);
     res.json({ message: 'Product deleted' });
   } catch (error) {
     console.error('Delete product error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Feedback: list with filters and pagination
+router.get('/feedback', async (req, res) => {
+  try {
+    const { role, category, minRating, maxRating, q, page = 1, limit = 20 } = req.query;
+    const filter = {};
+    if (role) filter.role = role;
+    if (category) filter.category = category;
+    if (minRating || maxRating) {
+      filter.rating = {};
+      if (minRating) filter.rating.$gte = Math.max(1, Number(minRating));
+      if (maxRating) filter.rating.$lte = Math.min(5, Number(maxRating));
+    }
+    if (q) {
+      const re = new RegExp(String(q), 'i');
+      filter.$or = [{ subject: re }, { message: re }, { category: re }];
+    }
+    const lim = Math.min(parseInt(limit, 10) || 20, 100);
+    const skip = (Math.max(parseInt(page, 10) || 1, 1) - 1) * lim;
+
+    const [items, total] = await Promise.all([
+      Feedback.find(filter).sort({ createdAt: -1 }).skip(skip).limit(lim).populate('user', 'username email role'),
+      Feedback.countDocuments(filter)
+    ]);
+    res.json({ items, total, page: parseInt(page, 10) || 1, limit: lim });
+  } catch (error) {
+    console.error('List feedback error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });

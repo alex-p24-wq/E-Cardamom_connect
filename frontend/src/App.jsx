@@ -5,17 +5,38 @@ import LoginPage from "./pages/LoginPage.jsx";
 import RegisterPage from "./pages/RegisterPage.jsx";
 import DashboardPage from "./pages/DashboardPage.jsx";
 import CheckoutPage from "./pages/CheckoutPage.jsx";
+import ProtectedRoute from "./components/auth/ProtectedRoute.jsx";
+import { NotificationProvider } from "./contexts/NotificationContext.jsx";
+import { ConfirmationProvider } from "./contexts/ConfirmationContext.jsx";
 import "./App.css";
 
 export default function App() {
   return (
-    <Routes>
-      <Route path="/" element={<LandingPage />} />
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/register" element={<RegisterPage />} />
-      <Route path="/dashboard" element={<DashboardPage />} />
-      <Route path="/checkout/:productId" element={<CheckoutPage />} />
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+    <NotificationProvider>
+      <ConfirmationProvider>
+        <Routes>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <DashboardPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/checkout/:productId"
+            element={
+              <ProtectedRoute>
+                <CheckoutPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </ConfirmationProvider>
+    </NotificationProvider>
   );
 }

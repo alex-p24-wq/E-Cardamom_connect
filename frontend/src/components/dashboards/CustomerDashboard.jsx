@@ -9,6 +9,7 @@ import CustomerOrders from "./customer/CustomerOrders";
 import CustomerMarketplace from "./customer/CustomerMarketplace";
 import CustomerWishlist from "./customer/CustomerWishlist";
 import CustomerProfile from "./customer/CustomerProfile";
+import CustomerFeedback from "./customer/CustomerFeedback";
 
 export default function CustomerDashboard({ user }) {
   const [activePage, setActivePage] = useState("overview");
@@ -24,6 +25,7 @@ export default function CustomerDashboard({ user }) {
     { id: "marketplace", label: "Marketplace", icon: "🛒" },
     { id: "orders", label: "My Orders", icon: "📦" },
     { id: "wishlist", label: "Wishlist", icon: "❤️" },
+    { id: "feedback", label: "Feedback", icon: "💬" },
     { id: "profile", label: "Profile", icon: "👤" },
   ];
 
@@ -38,6 +40,8 @@ export default function CustomerDashboard({ user }) {
         return <CustomerOrders user={user} />;
       case "wishlist":
         return <CustomerWishlist user={user} />;
+      case "feedback":
+        return <CustomerFeedback />;
       case "profile":
         return <CustomerProfile user={user} />;
       default:

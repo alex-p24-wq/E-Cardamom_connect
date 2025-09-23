@@ -69,7 +69,7 @@ export const roleFieldValidators = {
     fullName: (v) => (isNonEmptyString(v) ? null : "Full Name is required"),
     farmLocation: (v) => (isNonEmptyString(v) ? null : "Farm Location is required"),
     farmSize: (v) => (Number(v) > 0 ? null : "Enter valid farm size"),
-    // idProof optional client-side; file size/type hints are shown in UI
+    idProof: (v) => (v ? null : "ID Proof is required"),
   },
   agricare: {
     businessName: (v) => (isNonEmptyString(v) ? null : "Business Name is required"),

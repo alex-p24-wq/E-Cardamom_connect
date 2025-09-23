@@ -2,6 +2,7 @@ import React from "react";
 import DashboardLayout from "./DashboardLayout";
 import "../../css/HubDashboard.css";
 import "../../css/theme-modern.css";
+import FeedbackForm from "./shared/FeedbackForm";
 
 export default function HubDashboard({ user }) {
   // Menu items for hub dashboard
@@ -12,6 +13,7 @@ export default function HubDashboard({ user }) {
     { id: "farmers", label: "Farmers", icon: "👨‍🌾" },
     { id: "customers", label: "Customers", icon: "👥" },
     { id: "analytics", label: "Analytics", icon: "📈" },
+    { id: "feedback", label: "Feedback", icon: "💬" },
     { id: "profile", label: "Profile", icon: "👤" },
   ];
 
@@ -89,6 +91,8 @@ export default function HubDashboard({ user }) {
             </div>
           </div>
         </div>
+
+        <FeedbackForm title="Hub Feedback" />
       </div>
     </DashboardLayout>
   );

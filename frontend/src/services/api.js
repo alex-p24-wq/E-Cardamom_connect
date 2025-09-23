@@ -37,6 +37,31 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
+// Global response interceptor: auto-logout on 401/403
+api.interceptors.response.use(
+  (res) => res,
+  async (error) => {
+    const status = error?.response?.status;
+    if (status === 401 || status === 403) {
+      try {
+        const { logout } = await import('../services/auth');
+        await logout();
+      } catch (_) {}
+      // Redirect to login with intended path
+      try {
+        const current = window.location.pathname + window.location.search;
+        const redirect = encodeURIComponent(current);
+        if (!/\/login/i.test(window.location.pathname)) {
+          window.location.replace(`/login?redirect=${redirect}`);
+        }
+      } catch (_) {}
+      // Soft signal to callers that auth is gone
+      error.isAuthError = true;
+    }
+    return Promise.reject(error);
+  }
+);
+
 // Auth services
 export const registerUser = async (userData) => {
   try {
@@ -51,6 +76,17 @@ export const registerUser = async (userData) => {
 export const loginUser = async (credentials) => {
   try {
     const response = await api.post('/auth/login', credentials);
+    return response.data;
+  } catch (error) {
+    const msg = error?.response?.data?.message || error?.response?.data?.errors?.[0]?.msg || error?.message || 'Network error';
+    throw { message: msg };
+  }
+};
+
+export const loginWithGoogle = async (idToken, role) => {
+  try {
+    const payload = role ? { idToken, role } : { idToken };
+    const response = await api.post('/auth/google', payload);
     return response.data;
   } catch (error) {
     const msg = error?.response?.data?.message || error?.response?.data?.errors?.[0]?.msg || error?.message || 'Network error';

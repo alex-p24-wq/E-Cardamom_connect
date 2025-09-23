@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import "../../../css/CustomerDashboard.css";
+import "../../../css/CardamomComponents.css";
 import { getCustomerOrders, getWishlist } from "../../../services/api";
 
 export default function CustomerOverview({ user }) {
@@ -7,9 +7,18 @@ export default function CustomerOverview({ user }) {
   const [profile, setProfile] = useState(() => {
     try {
       const saved = localStorage.getItem("customerProfile");
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const savedProfile = JSON.parse(saved);
+        // Only use saved profile if it belongs to the current user
+        if (savedProfile.userId === user?.id) {
+          return savedProfile;
+        } else {
+          // Clear outdated profile data
+          localStorage.removeItem("customerProfile");
+        }
+      }
     } catch {}
-    return { fullName: user?.profile?.fullName || "", email: user?.email || "" };
+    return { fullName: user?.profile?.fullName || "", email: user?.email || "", userId: user?.id };
   });
 
   const [counts, setCounts] = useState({ orders: 0, wishlist: 0, cart: 0, addresses: 0 });
@@ -65,10 +74,20 @@ export default function CustomerOverview({ user }) {
       }
     };
 
-    // Keep profile fresh from localStorage if it changes elsewhere
+    // Keep profile fresh from localStorage if it changes elsewhere, but only for current user
     try {
       const saved = localStorage.getItem("customerProfile");
-      if (saved) setProfile(JSON.parse(saved));
+      if (saved) {
+        const savedProfile = JSON.parse(saved);
+        // Only use saved profile if it belongs to the current user
+        if (savedProfile.userId === user?.id) {
+          setProfile(savedProfile);
+        } else {
+          // Clear outdated profile data and reset to current user
+          localStorage.removeItem("customerProfile");
+          setProfile({ fullName: user?.profile?.fullName || "", email: user?.email || "", userId: user?.id });
+        }
+      }
     } catch {}
 
     loadOverview();
@@ -96,9 +115,9 @@ export default function CustomerOverview({ user }) {
   };
 
   const featuredProducts = [
-    { id: 1, name: "Premium Cardamom", price: 450, image: "/images/plant11.jpeg" },
-    { id: 2, name: "Organic Cardamom", price: 550, image: "/images/plant12.jpeg" },
-    { id: 3, name: "Special Grade Cardamom", price: 650, image: "/images/plant13.jpeg" },
+    { id: 1, name: "Premium Green Cardamom", price: 450, image: "/images/plant11.jpeg", description: "Fresh harvest from Kerala hills" },
+    { id: 2, name: "Organic Cardamom Pods", price: 550, image: "/images/plant12.jpeg", description: "Certified organic, pesticide-free" },
+    { id: 3, name: "Special Grade Cardamom", price: 650, image: "/images/plant13.jpeg", description: "Export quality, hand-picked" },
   ];
 
   return (
@@ -197,7 +216,10 @@ export default function CustomerOverview({ user }) {
                     <div className="product-details">
                       <h4>{product.name}</h4>
                       <p className="product-price">₹{product.price}/kg</p>
-                      <button className="add-to-cart-btn">Add to Cart</button>
+                      <p style={{ fontSize: '12px', color: '#5d4037', margin: '4px 0 8px', lineHeight: '1.3' }}>
+                        {product.description}
+                      </p>
+                      <button className="add-to-cart-btn">🛒 Add to Cart</button>
                     </div>
                   </div>
                 ))}

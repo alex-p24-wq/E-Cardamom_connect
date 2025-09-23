@@ -404,6 +404,107 @@ router.post('/login', [
   }
 });
 
+// Google Sign-In: exchange Firebase/Google ID token for app JWT
+router.post('/google', [
+  body('idToken').notEmpty().withMessage('idToken is required'),
+  body('role').optional().isIn(['customer', 'farmer', 'agricare', 'hub']).withMessage('Invalid role')
+], async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+
+  const { idToken, role: requestedRole } = req.body;
+  try {
+    // Verify Google ID token using Google tokeninfo endpoint (simple, server-side)
+    let fetchFn = globalThis.fetch;
+    if (!fetchFn) {
+      try {
+        const nf = await import('node-fetch');
+        fetchFn = nf.default || nf;
+      } catch (e) {
+        return res.status(500).json({ message: 'Server missing fetch. Use Node.js 18+ or install node-fetch.' });
+      }
+    }
+
+    const resp = await fetchFn(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(idToken)}`);
+    if (!resp.ok) {
+      return res.status(401).json({ message: 'Invalid Google ID token' });
+    }
+    const info = await resp.json();
+
+    // Optional: enforce audience if set
+    const expectedAud = process.env.GOOGLE_CLIENT_ID || process.env.VITE_GOOGLE_CLIENT_ID;
+    if (expectedAud && info.aud && info.aud !== expectedAud) {
+      return res.status(401).json({ message: 'Invalid token audience' });
+    }
+
+    const emailVerified = String(info.email_verified || info.emailVerified || '').toLowerCase() === 'true' || info.email_verified === true;
+    const email = info.email;
+    if (!email || !emailVerified) {
+      return res.status(400).json({ message: 'Google account email not verified' });
+    }
+
+    // Find or create user by email
+    let user = await User.findOne({ email: email.toLowerCase() });
+    if (!user) {
+      // Create a unique username from Google name or email local-part
+      const base = (info.name || email.split('@')[0] || 'user').toLowerCase().replace(/[^a-z0-9_.-]+/g, '-').slice(0, 20) || 'user';
+      let candidate = base;
+      let suffix = 0;
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
+        const exists = await User.findOne({ username: candidate });
+        if (!exists) break;
+        suffix += 1;
+        candidate = `${base}${suffix}`.slice(0, 30);
+      }
+
+      // Generate random password so schema pre-save can hash it
+      const randomPass = Math.random().toString(36).slice(2) + Math.random().toString(36).toUpperCase().slice(2);
+
+      user = new User({
+        username: candidate,
+        email: email.toLowerCase(),
+        password: randomPass,
+        role: requestedRole || 'customer',
+        profileData: {
+          name: info.name || undefined,
+          picture: info.picture || undefined,
+          provider: 'google',
+          googleSub: info.sub
+        }
+      });
+      await user.save();
+    } else if (requestedRole && user.role !== requestedRole) {
+      // Update existing user's role if a different role is selected
+      user.role = requestedRole;
+      await user.save();
+    }
+
+    // Issue app JWT
+    const token = jwt.sign(
+      { id: user._id, role: user.role },
+      process.env.JWT_SECRET || 'your_jwt_secret',
+      { expiresIn: '1d' }
+    );
+
+    return res.json({
+      message: 'Google login successful',
+      token,
+      user: {
+        id: user._id,
+        username: user.username,
+        email: user.email,
+        role: user.role
+      }
+    });
+  } catch (err) {
+    console.error('Google auth error:', err);
+    return res.status(500).json({ message: 'Server error during Google authentication' });
+  }
+});
+
 export default router;
 
 // Mailer diagnostics (do not expose in production)
