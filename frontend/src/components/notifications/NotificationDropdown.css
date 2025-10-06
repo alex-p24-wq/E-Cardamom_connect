@@ -91,21 +91,31 @@
   gap: 8px;
 }
 
+.refresh-btn,
 .mark-all-read-btn,
 .clear-all-btn {
-  background: rgba(255, 255, 255, 0.2);
+  background: none;
   border: none;
-  border-radius: 6px;
-  padding: 6px 8px;
+  font-size: 14px;
   cursor: pointer;
-  transition: all 0.2s ease;
-  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
 }
 
+.refresh-btn:hover,
 .mark-all-read-btn:hover,
 .clear-all-btn:hover {
-  background: rgba(255, 255, 255, 0.3);
-  transform: scale(1.05);
+  background: #f3f4f6;
+}
+
+.refresh-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.refresh-btn:disabled:hover {
+  background: none;
 }
 
 .notification-list {

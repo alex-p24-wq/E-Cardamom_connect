@@ -8,13 +8,15 @@ import CheckoutPage from "./pages/CheckoutPage.jsx";
 import ProtectedRoute from "./components/auth/ProtectedRoute.jsx";
 import { NotificationProvider } from "./contexts/NotificationContext.jsx";
 import { ConfirmationProvider } from "./contexts/ConfirmationContext.jsx";
+import { ToastProvider } from "./components/notifications/ToastContainer.jsx";
 import "./App.css";
 
 export default function App() {
   return (
     <NotificationProvider>
       <ConfirmationProvider>
-        <Routes>
+        <ToastProvider>
+          <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
@@ -35,7 +37,8 @@ export default function App() {
             }
           />
           <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+          </Routes>
+        </ToastProvider>
       </ConfirmationProvider>
     </NotificationProvider>
   );

@@ -3,6 +3,7 @@ import DashboardLayout from "./DashboardLayout";
 import "../../css/AgriCareDashboard.css";
 import "../../css/theme-modern.css";
 import FeedbackForm from "./shared/FeedbackForm";
+import { getAgricareStats, getAgricareProducts, getAgricareOrders, getAgricareFarmers } from "../../services/api";
 
 export default function AgriCareDashboard({ user }) {
   // Sidebar menu for AgriCare
@@ -19,24 +20,12 @@ export default function AgriCareDashboard({ user }) {
   // Track active section (synced with DashboardLayout via onMenuItemClick)
   const [active, setActive] = useState("overview");
 
-  // Demo data (replace with API when endpoints are ready)
-  const [products, setProducts] = useState([
-    { id: "P-101", name: "Soil Test Kit", price: 999, stock: 42, grade: "Premium" },
-    { id: "P-102", name: "Organic Fertilizer", price: 499, stock: 120, grade: "Regular" },
-    { id: "P-103", name: "Pest Control Spray", price: 299, stock: 60, grade: "Special" },
-  ]);
-
-  const [orders, setOrders] = useState([
-    { id: "O-8901", date: "2025-05-08", status: "Processing", total: 3496, items: 4 },
-    { id: "O-8892", date: "2025-05-07", status: "Shipped", total: 1299, items: 1 },
-    { id: "O-8871", date: "2025-05-05", status: "Delivered", total: 1999, items: 2 },
-  ]);
-
-  const [farmers, setFarmers] = useState([
-    { id: "F-201", name: "Rahul N", location: "Idukki, KL", joined: "2024-10-12" },
-    { id: "F-214", name: "Meera V", location: "Kumily, KL", joined: "2024-11-28" },
-    { id: "F-225", name: "Jijo P", location: "Munnar, KL", joined: "2025-01-15" },
-  ]);
+  // Live data from API
+  const [products, setProducts] = useState([]);
+  const [orders, setOrders] = useState([]);
+  const [farmers, setFarmers] = useState([]);
+  const [stats, setStats] = useState({ products: 0, orders: 0, farmers: 0, revenue: 0 });
+  const [loading, setLoading] = useState(false);
 
   // Simple profile (persisted locally for demo)
   const [profile, setProfile] = useState(() => {
@@ -51,12 +40,42 @@ export default function AgriCareDashboard({ user }) {
     try { localStorage.setItem("agricareProfile", JSON.stringify(profile)); } catch {}
   }, [profile]);
 
+  // Load data when component mounts or active section changes
+  useEffect(() => {
+    const loadData = async () => {
+      setLoading(true);
+      try {
+        // Load stats
+        const statsRes = await getAgricareStats();
+        setStats(statsRes);
+
+        // Load products
+        const productsRes = await getAgricareProducts({ page: 1, limit: 10 });
+        setProducts(productsRes.items || []);
+
+        // Load orders
+        const ordersRes = await getAgricareOrders({ page: 1, limit: 10 });
+        setOrders(ordersRes.items || []);
+
+        // Load farmers
+        const farmersRes = await getAgricareFarmers({ page: 1, limit: 10 });
+        setFarmers(farmersRes.items || []);
+      } catch (error) {
+        console.error('Failed to load AgriCare data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, []);
+
   const counts = useMemo(() => ({
-    products: products.length,
-    orders: orders.length,
-    farmers: farmers.length,
-    revenue: orders.reduce((sum, o) => sum + (o.total || 0), 0),
-  }), [products, orders, farmers]);
+    products: stats.products || products.length,
+    orders: stats.orders || orders.length,
+    farmers: stats.farmers || farmers.length,
+    revenue: stats.revenue || orders.reduce((sum, o) => sum + (o.total || 0), 0),
+  }), [stats, products, orders, farmers]);
 
   const formatCurrency = (amount, currency = "INR") => {
     try { return new Intl.NumberFormat("en-IN", { style: "currency", currency }).format(amount || 0); }
@@ -79,28 +98,28 @@ export default function AgriCareDashboard({ user }) {
         <div className="stat-card">
           <div className="stat-icon" style={{ backgroundColor: "#4CAF50" }}>🧪</div>
           <div className="stat-details">
-            <h3>{counts.products}</h3>
+            <h3>{loading ? "..." : counts.products}</h3>
             <p>Active Products</p>
           </div>
         </div>
         <div className="stat-card">
           <div className="stat-icon" style={{ backgroundColor: "#2196F3" }}>🛒</div>
           <div className="stat-details">
-            <h3>{counts.orders}</h3>
+            <h3>{loading ? "..." : counts.orders}</h3>
             <p>Recent Orders</p>
           </div>
         </div>
         <div className="stat-card">
           <div className="stat-icon" style={{ backgroundColor: "#FF9800" }}>👨‍🌾</div>
           <div className="stat-details">
-            <h3>{counts.farmers}</h3>
+            <h3>{loading ? "..." : counts.farmers}</h3>
             <p>Farmer Clients</p>
           </div>
         </div>
         <div className="stat-card">
           <div className="stat-icon" style={{ backgroundColor: "#9C27B0" }}>💰</div>
           <div className="stat-details">
-            <h3>{formatCurrency(counts.revenue)}</h3>
+            <h3>{loading ? "..." : formatCurrency(counts.revenue)}</h3>
             <p>Monthly Revenue</p>
           </div>
         </div>
@@ -114,8 +133,17 @@ export default function AgriCareDashboard({ user }) {
               <button className="view-all-btn" onClick={() => setActive("orders")}>View All</button>
             </div>
             <div className="card-content">
-              {orders.length === 0 ? (
-                <p>No recent orders</p>
+              {loading ? (
+                <div className="empty-state">
+                  <div className="empty-icon">⏳</div>
+                  <h3>Loading orders...</h3>
+                </div>
+              ) : orders.length === 0 ? (
+                <div className="empty-state">
+                  <div className="empty-icon">🛒</div>
+                  <h3>No recent orders</h3>
+                  <p>Orders will appear here as they come in.</p>
+                </div>
               ) : (
                 <table className="data-table">
                   <thead>
@@ -149,8 +177,17 @@ export default function AgriCareDashboard({ user }) {
               <button className="view-all-btn" onClick={() => setActive("products")}>View All</button>
             </div>
             <div className="card-content">
-              {products.length === 0 ? (
-                <p>No products yet</p>
+              {loading ? (
+                <div className="empty-state">
+                  <div className="empty-icon">⏳</div>
+                  <h3>Loading products...</h3>
+                </div>
+              ) : products.length === 0 ? (
+                <div className="empty-state">
+                  <div className="empty-icon">🧪</div>
+                  <h3>No products yet</h3>
+                  <p>Add your first AgriCare product to get started.</p>
+                </div>
               ) : (
                 <div className="product-grid">
                   {products.slice(0, 4).map(p => (

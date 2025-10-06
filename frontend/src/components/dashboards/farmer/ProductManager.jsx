@@ -2,6 +2,8 @@ import React, { useEffect, useState } from "react";
 import api from "../../../services/api";
 import { useNotifications } from "../../../contexts/NotificationContext";
 import { notificationTemplates, createErrorNotification } from "../../../utils/notifications";
+import { getAllStates, getDistrictsForState } from "../../../data/indianStatesDistricts";
+import { getHubsByDistrict } from "../../../services/api";
 import "../../../css/CardamomComponents.css";
 import "../../../css/FarmerComponents.css";
 
@@ -15,8 +17,9 @@ export default function ProductManager() {
     stock: "",
     grade: "Premium",
     image: "",
-    address: "",
-    experienceYears: "",
+    state: "",
+    district: "",
+    nearestHub: "",
     description: "",
   };
 
@@ -27,6 +30,10 @@ export default function ProductManager() {
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
   const [error, setError] = useState("");
+  const [states] = useState(getAllStates());
+  const [districts, setDistricts] = useState([]);
+  const [hubs, setHubs] = useState([]);
+  const [loadingHubs, setLoadingHubs] = useState(false);
 
   // Load current farmer's products
   useEffect(() => {
@@ -45,9 +52,33 @@ export default function ProductManager() {
     load();
   }, []);
 
-  const handleChange = (e) => {
+  const handleChange = async (e) => {
     const { name, value } = e.target;
     setForm((f) => ({ ...f, [name]: value }));
+    
+    // Update districts when state changes
+    if (name === 'state') {
+      const stateDistricts = getDistrictsForState(value);
+      setDistricts(stateDistricts);
+      setForm((f) => ({ ...f, state: value, district: '', nearestHub: '' })); // Reset district and hub
+      setHubs([]); // Clear hubs when state changes
+    }
+    
+    // Update hubs when district changes
+    if (name === 'district' && value && form.state) {
+      setLoadingHubs(true);
+      try {
+        const districtHubs = await getHubsByDistrict(form.state, value);
+        setHubs(districtHubs);
+        setForm((f) => ({ ...f, district: value, nearestHub: '' })); // Reset hub selection
+      } catch (error) {
+        console.error('Error fetching hubs:', error);
+        setHubs([]);
+        // Don't show error to user, just log it
+      } finally {
+        setLoadingHubs(false);
+      }
+    }
   };
 
   const handleFileChange = (e) => {
@@ -70,6 +101,26 @@ export default function ProductManager() {
   const addProduct = async (e) => {
     e.preventDefault();
     setError("");
+    
+    // Client-side validation
+    const price = Number(form.price);
+    const stock = Number(form.stock);
+    
+    if (!form.name.trim()) {
+      setError("Product name is required");
+      return;
+    }
+    
+    if (isNaN(price) || price <= 0) {
+      setError("Price must be a positive number greater than ₹0");
+      return;
+    }
+    
+    if (isNaN(stock) || stock < 1 || !Number.isInteger(stock)) {
+      setError("Stock must be at least 1 kg (whole number)");
+      return;
+    }
+    
     setAdding(true);
     try {
       // Use multipart/form-data when a file is selected
@@ -80,8 +131,9 @@ export default function ProductManager() {
         formData.append('price', String(Number(form.price)));
         formData.append('stock', String(Number(form.stock)));
         formData.append('grade', form.grade);
-        if (form.address) formData.append('address', form.address.trim());
-        if (form.experienceYears) formData.append('experienceYears', String(Number(form.experienceYears)));
+        if (form.state) formData.append('state', form.state.trim());
+        if (form.district) formData.append('district', form.district.trim());
+        if (form.nearestHub) formData.append('nearestHub', form.nearestHub.trim());
         if (form.description) formData.append('description', form.description.trim());
         formData.append('image', file); // field name must be 'image'
 
@@ -97,8 +149,9 @@ export default function ProductManager() {
           stock: Number(form.stock),
           grade: form.grade,
           image: form.image?.trim() || undefined,
-          address: form.address?.trim() || undefined,
-          experienceYears: form.experienceYears ? Number(form.experienceYears) : undefined,
+          state: form.state?.trim() || undefined,
+          district: form.district?.trim() || undefined,
+          nearestHub: form.nearestHub?.trim() || undefined,
           description: form.description?.trim() || undefined,
         };
         const res = await api.post("/farmer/products", payload);
@@ -160,11 +213,13 @@ export default function ProductManager() {
             </div>
             <div className="pm-field">
               <label>Price (₹/kg)</label>
-              <input type="number" name="price" value={form.price} onChange={handleChange} min="0" step="0.01" required />
+              <input type="number" name="price" value={form.price} onChange={handleChange} min="0.01" step="0.01" required />
+              <small style={{ color: '#666', fontSize: '12px' }}>Must be greater than ₹0</small>
             </div>
             <div className="pm-field">
               <label>Stock (kg)</label>
-              <input type="number" name="stock" value={form.stock} onChange={handleChange} min="0" step="1" required />
+              <input type="number" name="stock" value={form.stock} onChange={handleChange} min="1" step="1" required />
+              <small style={{ color: '#666', fontSize: '12px' }}>Must be at least 1 kg</small>
             </div>
             <div className="pm-field">
               <label>Grade</label>
@@ -175,12 +230,48 @@ export default function ProductManager() {
               </select>
             </div>
             <div className="pm-field">
-              <label>Farmer Address</label>
-              <input name="address" value={form.address} onChange={handleChange} />
+              <label>State</label>
+              <select name="state" value={form.state} onChange={handleChange}>
+                <option value="">Select State</option>
+                {states.map(state => (
+                  <option key={state} value={state}>{state}</option>
+                ))}
+              </select>
             </div>
             <div className="pm-field">
-              <label>Years of Experience</label>
-              <input type="number" name="experienceYears" value={form.experienceYears} onChange={handleChange} min="0" placeholder="e.g., 5" />
+              <label>District</label>
+              <select name="district" value={form.district} onChange={handleChange} disabled={!form.state}>
+                <option value="">Select District</option>
+                {districts.map(district => (
+                  <option key={district} value={district}>{district}</option>
+                ))}
+              </select>
+            </div>
+            <div className="pm-field pm-col-span-2">
+              <label>Nearest Hub</label>
+              <select 
+                name="nearestHub" 
+                value={form.nearestHub} 
+                onChange={handleChange}
+                disabled={!form.district || loadingHubs}
+              >
+                <option value="">
+                  {!form.district ? 'Select District First' : 
+                   loadingHubs ? 'Loading Hubs...' : 
+                   hubs.length === 0 ? 'No Hubs Available in This District' : 
+                   'Select Nearest Hub'}
+                </option>
+                {hubs.map(hub => (
+                  <option key={hub._id} value={hub.name}>
+                    {hub.name} - {hub.address}
+                  </option>
+                ))}
+              </select>
+              {form.district && hubs.length === 0 && !loadingHubs && (
+                <small style={{ color: '#ff9800', fontSize: '12px', marginTop: '4px', display: 'block' }}>
+                  No registered hubs found in {form.district}. You can still add your product.
+                </small>
+              )}
             </div>
             <div className="pm-field pm-col-span-2">
               <label>Image (upload from device)</label>
@@ -215,10 +306,10 @@ export default function ProductManager() {
               <div className="pm-preview-details">
                 <h3>{form.name || 'Product Name'}</h3>
                 <p className="pm-preview-price">₹{form.price || 0}/kg · {form.stock || 0} kg · {form.grade}</p>
-                {(form.address || form.experienceYears) && (
+                {(form.state || form.district || form.nearestHub) && (
                   <p className="pm-preview-meta">
-                    {form.address ? <>📍 {form.address} </> : null}
-                    {form.experienceYears ? <> · 👨‍🌾 {form.experienceYears} yrs</> : null}
+                    {form.state && form.district ? <>📍 {form.district}, {form.state}</> : form.state ? <>📍 {form.state}</> : null}
+                    {form.nearestHub ? <> · 🏪 {form.nearestHub}</> : null}
                   </p>
                 )}
                 {form.description && <p className="pm-preview-desc">{form.description}</p>}
@@ -247,10 +338,10 @@ export default function ProductManager() {
                     <div className="product-details" style={{ padding: 12 }}>
                       <h3 style={{ margin: '0 0 6px 0', fontSize: 16 }}>{p.name}</h3>
                       <p className="product-price" style={{ margin: 0, color: '#2e7d32', fontWeight: 700 }}>₹{p.price}/kg · {p.stock} kg · {p.grade}</p>
-                      {(p.address || p.experienceYears) && (
+                      {(p.state || p.district || p.nearestHub) && (
                         <p style={{ margin: '6px 0 0', color: '#607d8b', fontSize: 13 }}>
-                          {p.address ? <>📍 {p.address} </> : null}
-                          {p.experienceYears ? <> · 👨‍🌾 {p.experienceYears} yrs</> : null}
+                          {p.state && p.district ? <>📍 {p.district}, {p.state}</> : p.state ? <>📍 {p.state}</> : null}
+                          {p.nearestHub ? <> · 🏪 {p.nearestHub}</> : null}
                         </p>
                       )}
                       {p.description && <p style={{ margin: '8px 0 0', color: '#37474f', fontSize: 13 }}>{p.description}</p>}

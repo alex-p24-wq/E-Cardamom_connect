@@ -274,4 +274,250 @@ export const adminDeleteOrder = async (id) => {
   catch (error) { const msg = error?.response?.data?.message || error?.message || 'Failed to delete order'; throw { message: msg }; }
 };
 
+// Farmer services
+export const getFarmerProducts = async () => {
+  try {
+    const res = await api.get('/farmer/products/mine');
+    return res.data;
+  } catch (error) {
+    const msg = error?.response?.data?.message || error?.message || 'Failed to fetch farmer products';
+    throw { message: msg };
+  }
+};
+
+export const createFarmerProduct = async (productData) => {
+  try {
+    const res = await api.post('/farmer/products', productData);
+    return res.data;
+  } catch (error) {
+    const msg = error?.response?.data?.message || error?.message || 'Failed to create product';
+    throw { message: msg };
+  }
+};
+
+export const deleteFarmerProduct = async (productId) => {
+  try {
+    const res = await api.delete(`/farmer/products/${productId}`);
+    return res.data;
+  } catch (error) {
+    const msg = error?.response?.data?.message || error?.message || 'Failed to delete product';
+    throw { message: msg };
+  }
+};
+
+export const getFarmerOrders = async (params = {}) => {
+  try {
+    const res = await api.get('/farmer/orders', { params });
+    return res.data;
+  } catch (error) {
+    const msg = error?.response?.data?.message || error?.message || 'Failed to fetch farmer orders';
+    throw { message: msg };
+  }
+};
+
+export const getFarmerStats = async () => {
+  try {
+    const res = await api.get('/farmer/stats');
+    return res.data;
+  } catch (error) {
+    const msg = error?.response?.data?.message || error?.message || 'Failed to fetch farmer stats';
+    throw { message: msg };
+  }
+};
+
+// Hub services
+export const getHubStats = async () => {
+  try {
+    const res = await api.get('/hubmanager/stats');
+    return res.data;
+  } catch (error) {
+    const msg = error?.response?.data?.message || error?.message || 'Failed to fetch hub stats';
+    throw { message: msg };
+  }
+};
+
+export const getHubInventory = async (params = {}) => {
+  try {
+    const res = await api.get('/hubmanager/inventory', { params });
+    return res.data;
+  } catch (error) {
+    const msg = error?.response?.data?.message || error?.message || 'Failed to fetch hub inventory';
+    throw { message: msg };
+  }
+};
+
+export const getHubShipments = async (params = {}) => {
+  try {
+    const res = await api.get('/hubmanager/shipments', { params });
+    return res.data;
+  } catch (error) {
+    const msg = error?.response?.data?.message || error?.message || 'Failed to fetch hub shipments';
+    throw { message: msg };
+  }
+};
+
+export const getHubFarmers = async (params = {}) => {
+  try {
+    const res = await api.get('/hubmanager/farmers', { params });
+    return res.data;
+  } catch (error) {
+    const msg = error?.response?.data?.message || error?.message || 'Failed to fetch hub farmers';
+    throw { message: msg };
+  }
+};
+
+// AgriCare services
+export const getAgricareStats = async () => {
+  try {
+    const res = await api.get('/agricare/stats');
+    return res.data;
+  } catch (error) {
+    const msg = error?.response?.data?.message || error?.message || 'Failed to fetch agricare stats';
+    throw { message: msg };
+  }
+};
+
+export const getAgricareProducts = async (params = {}) => {
+  try {
+    const res = await api.get('/agricare/products', { params });
+    return res.data;
+  } catch (error) {
+    const msg = error?.response?.data?.message || error?.message || 'Failed to fetch agricare products';
+    throw { message: msg };
+  }
+};
+
+export const getAgricareOrders = async (params = {}) => {
+  try {
+    const res = await api.get('/agricare/orders', { params });
+    return res.data;
+  } catch (error) {
+    const msg = error?.response?.data?.message || error?.message || 'Failed to fetch agricare orders';
+    throw { message: msg };
+  }
+};
+
+export const getAgricareFarmers = async (params = {}) => {
+  try {
+    const res = await api.get('/agricare/farmers', { params });
+    return res.data;
+  } catch (error) {
+    const msg = error?.response?.data?.message || error?.message || 'Failed to fetch agricare farmers';
+    throw { message: msg };
+  }
+};
+
+// Payment services
+export const createPaymentOrder = async (orderId) => {
+  try {
+    const res = await api.post('/payment/create-order', { orderId });
+    return res.data;
+  } catch (error) {
+    const msg = error?.response?.data?.message || error?.message || 'Failed to create payment order';
+    throw { message: msg };
+  }
+};
+
+export const verifyPayment = async (paymentData) => {
+  try {
+    const res = await api.post('/payment/verify-payment', paymentData);
+    return res.data;
+  } catch (error) {
+    const msg = error?.response?.data?.message || error?.message || 'Payment verification failed';
+    throw { message: msg };
+  }
+};
+
+export const handlePaymentFailure = async (orderId, error) => {
+  try {
+    const res = await api.post('/payment/payment-failed', { orderId, error });
+    return res.data;
+  } catch (error) {
+    const msg = error?.response?.data?.message || error?.message || 'Failed to handle payment failure';
+    throw { message: msg };
+  }
+};
+
+export const getPaymentStatus = async (orderId) => {
+  try {
+    const res = await api.get(`/payment/status/${orderId}`);
+    return res.data;
+  } catch (error) {
+    const msg = error?.response?.data?.message || error?.message || 'Failed to get payment status';
+    throw { message: msg };
+  }
+};
+
+// Notification services
+export const getNotifications = async (params = {}) => {
+  try {
+    const res = await api.get('/notifications', { params });
+    return res.data;
+  } catch (error) {
+    const msg = error?.response?.data?.message || error?.message || 'Failed to get notifications';
+    throw { message: msg };
+  }
+};
+
+export const getUnreadNotificationCount = async () => {
+  try {
+    const res = await api.get('/notifications/unread-count');
+    return res.data;
+  } catch (error) {
+    const msg = error?.response?.data?.message || error?.message || 'Failed to get unread count';
+    throw { message: msg };
+  }
+};
+
+export const markNotificationAsRead = async (notificationId) => {
+  try {
+    const res = await api.patch(`/notifications/${notificationId}/read`);
+    return res.data;
+  } catch (error) {
+    const msg = error?.response?.data?.message || error?.message || 'Failed to mark notification as read';
+    throw { message: msg };
+  }
+};
+
+export const markAllNotificationsAsRead = async () => {
+  try {
+    const res = await api.patch('/notifications/mark-all-read');
+    return res.data;
+  } catch (error) {
+    const msg = error?.response?.data?.message || error?.message || 'Failed to mark all notifications as read';
+    throw { message: msg };
+  }
+};
+
+// Hub services
+export const getHubsByDistrict = async (state, district) => {
+  try {
+    const res = await api.get(`/hubs/by-district/${encodeURIComponent(state)}/${encodeURIComponent(district)}`);
+    return res.data;
+  } catch (error) {
+    const msg = error?.response?.data?.message || error?.message || 'Failed to get hubs';
+    throw { message: msg };
+  }
+};
+
+export const getAllHubs = async (params = {}) => {
+  try {
+    const res = await api.get('/hubs', { params });
+    return res.data;
+  } catch (error) {
+    const msg = error?.response?.data?.message || error?.message || 'Failed to get hubs';
+    throw { message: msg };
+  }
+};
+
+export const createHub = async (hubData) => {
+  try {
+    const res = await api.post('/hubs', hubData);
+    return res.data;
+  } catch (error) {
+    const msg = error?.response?.data?.message || error?.message || 'Failed to create hub';
+    throw { message: msg };
+  }
+};
+
 export default api;

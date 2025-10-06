@@ -1,7 +1,5 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useNavigationBlock } from "../hooks/useNavigationBlock";
-import { logout } from "../services/auth";
 import "../css/DashboardPage.css";
 
 // Role-specific dashboard components
@@ -15,23 +13,6 @@ export default function DashboardPage() {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-
-  // Enable navigation blocking for dashboard pages
-  useNavigationBlock(true);
-
-  // Handle force logout from navigation blocking
-  useEffect(() => {
-    const handleForceLogout = async () => {
-      await logout();
-      navigate("/login", { replace: true });
-    };
-
-    window.addEventListener('forceLogout', handleForceLogout);
-    
-    return () => {
-      window.removeEventListener('forceLogout', handleForceLogout);
-    };
-  }, [navigate]);
 
   useEffect(() => {
     // Read user only; route auth is enforced by ProtectedRoute

@@ -5,7 +5,7 @@ import './NotificationDropdown.css';
 export default function NotificationDropdown() {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
-  const { notifications, unreadCount, markAsRead, markAllAsRead, clearAllNotifications } = useNotifications();
+  const { notifications, unreadCount, loading, markAsRead, markAllAsRead, clearAllNotifications, fetchBackendNotifications } = useNotifications();
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -71,6 +71,14 @@ export default function NotificationDropdown() {
           <div className="notification-header">
             <h3>Notifications</h3>
             <div className="notification-actions">
+              <button 
+                className="refresh-btn"
+                onClick={fetchBackendNotifications}
+                title="Refresh notifications"
+                disabled={loading}
+              >
+                {loading ? '⟳' : '🔄'}
+              </button>
               {unreadCount > 0 && (
                 <button 
                   className="mark-all-read-btn"

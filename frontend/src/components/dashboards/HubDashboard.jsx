@@ -1,15 +1,18 @@
-import React from "react";
+import React, { useState } from "react";
 import DashboardLayout from "./DashboardLayout";
 import "../../css/HubDashboard.css";
 import "../../css/theme-modern.css";
+import HubOverview from "./hub/HubOverview";
+import HubList from "./hubmanager/HubList";
 import FeedbackForm from "./shared/FeedbackForm";
 
 export default function HubDashboard({ user }) {
+  const [activePage, setActivePage] = useState("overview");
+
   // Menu items for hub dashboard
   const menuItems = [
     { id: "overview", label: "Overview", icon: "📊" },
-    { id: "inventory", label: "Inventory", icon: "📦" },
-    { id: "logistics", label: "Logistics", icon: "🚚" },
+    { id: "hublist", label: "Hub Network", icon: "🏢" },
     { id: "farmers", label: "Farmers", icon: "👨‍🌾" },
     { id: "customers", label: "Customers", icon: "👥" },
     { id: "analytics", label: "Analytics", icon: "📈" },
@@ -17,83 +20,82 @@ export default function HubDashboard({ user }) {
     { id: "profile", label: "Profile", icon: "👤" },
   ];
 
+  const renderPageContent = () => {
+    switch (activePage) {
+      case "overview":
+        return <HubOverview user={user} />;
+      case "hublist":
+        return <HubList user={user} />;
+      case "farmers":
+        return (
+          <div className="hub-dashboard">
+            <div className="dashboard-card">
+              <div className="card-header">
+                <h3>Farmer Management</h3>
+              </div>
+              <div className="card-content">
+                <p>Farmer relationship management features will be implemented here.</p>
+              </div>
+            </div>
+          </div>
+        );
+      case "customers":
+        return (
+          <div className="hub-dashboard">
+            <div className="dashboard-card">
+              <div className="card-header">
+                <h3>Customer Management</h3>
+              </div>
+              <div className="card-content">
+                <p>Customer relationship management features will be implemented here.</p>
+              </div>
+            </div>
+          </div>
+        );
+      case "analytics":
+        return (
+          <div className="hub-dashboard">
+            <div className="dashboard-card">
+              <div className="card-header">
+                <h3>Analytics & Reports</h3>
+              </div>
+              <div className="card-content">
+                <p>Analytics and reporting features will be implemented here.</p>
+              </div>
+            </div>
+          </div>
+        );
+      case "feedback":
+        return <FeedbackForm title="Hub Feedback" />;
+      case "profile":
+        return (
+          <div className="hub-dashboard">
+            <div className="dashboard-card">
+              <div className="card-header">
+                <h3>Profile</h3>
+              </div>
+              <div className="card-content">
+                <p><b>Username:</b> {user.username}</p>
+                <p><b>Email:</b> {user.email}</p>
+                <p><b>Role:</b> {user.role}</p>
+              </div>
+            </div>
+          </div>
+        );
+      default:
+        return <HubOverview user={user} />;
+    }
+  };
+
   return (
     <DashboardLayout
       user={user}
       menuItems={menuItems}
-      pageTitle="Hub Manager Dashboard"
+      pageTitle={`Hub Manager Dashboard - ${activePage.charAt(0).toUpperCase() + activePage.slice(1)}`}
       roleName="Hub Manager"
+      onMenuItemClick={setActivePage}
     >
-      <div className="hub-dashboard">
-        <div className="welcome-banner">
-          <div className="welcome-content">
-            <h2>Welcome back, {user.username}!</h2>
-            <p>Manage your hub operations and logistics.</p>
-          </div>
-          <div className="welcome-image">
-            <img src="/images/plant14.jpeg" alt="Welcome" />
-          </div>
-        </div>
-
-        <div className="stats-grid">
-          <div className="stat-card">
-            <div className="stat-icon" style={{ backgroundColor: "#4CAF50" }}>📦</div>
-            <div className="stat-details">
-              <h3>1,250 kg</h3>
-              <p>Current Inventory</p>
-            </div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-icon" style={{ backgroundColor: "#2196F3" }}>🚚</div>
-            <div className="stat-details">
-              <h3>24</h3>
-              <p>Pending Shipments</p>
-            </div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-icon" style={{ backgroundColor: "#FF9800" }}>👨‍🌾</div>
-            <div className="stat-details">
-              <h3>78</h3>
-              <p>Registered Farmers</p>
-            </div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-icon" style={{ backgroundColor: "#9C27B0" }}>👥</div>
-            <div className="stat-details">
-              <h3>120</h3>
-              <p>Active Customers</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="dashboard-row">
-          <div className="dashboard-col">
-            <div className="dashboard-card">
-              <div className="card-header">
-                <h3>Recent Shipments</h3>
-                <button className="view-all-btn">View All</button>
-              </div>
-              <div className="card-content">
-                <p>Your recent shipments will appear here.</p>
-              </div>
-            </div>
-          </div>
-          
-          <div className="dashboard-col">
-            <div className="dashboard-card">
-              <div className="card-header">
-                <h3>Inventory Status</h3>
-                <button className="view-all-btn">View All</button>
-              </div>
-              <div className="card-content">
-                <p>Your inventory status will appear here.</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <FeedbackForm title="Hub Feedback" />
-      </div>
+      {renderPageContent()}
     </DashboardLayout>
   );
 }

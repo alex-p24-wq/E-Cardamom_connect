@@ -39,7 +39,11 @@ import agriCareRoutes from "./routes/agricare.js";
 import hubManagerRoutes from "./routes/hubmanager.js";
 import adminRoutes from "./routes/admin.js";
 import feedbackRoutes from "./routes/feedback.js";
+import paymentRoutes from "./routes/payment.js";
+import notificationRoutes from "./routes/notifications.js";
+import hubRoutes from "./routes/hub.js";
 import Feedback from "./models/Feedback.js";
+import { verifyEmailConfig } from "./utils/emailService.js";
 
 app.use("/api/auth", authRoutes);
 app.use("/api/farmer", farmerRoutes);
@@ -48,6 +52,9 @@ app.use("/api/agricare", agriCareRoutes);
 app.use("/api/hubmanager", hubManagerRoutes);
 app.use("/api/feedback", feedbackRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/payment", paymentRoutes);
+app.use("/api/notifications", notificationRoutes);
+app.use("/api/hubs", hubRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -107,6 +114,13 @@ const startServer = async () => {
       console.log('✅ Feedback indexes ensured');
     } catch (e) {
       console.warn('⚠️ Could not ensure Feedback indexes:', e?.message || e);
+    }
+
+    // Verify email configuration
+    try {
+      await verifyEmailConfig();
+    } catch (e) {
+      console.warn('⚠️ Email service verification failed:', e?.message || e);
     }
 
     startListening(DEFAULT_PORT);

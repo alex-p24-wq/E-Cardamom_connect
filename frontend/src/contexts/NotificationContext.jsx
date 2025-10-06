@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import { getNotifications, getUnreadNotificationCount, markNotificationAsRead as markAsReadAPI, markAllNotificationsAsRead as markAllAsReadAPI } from '../services/api';
 
 const NotificationContext = createContext();
 
@@ -11,36 +12,9 @@ export const useNotifications = () => {
 };
 
 export const NotificationProvider = ({ children }) => {
-  const [notifications, setNotifications] = useState([
-    // Sample notifications for demo
-    {
-      id: '1',
-      title: 'Welcome to Cardo!',
-      message: 'Your account has been successfully created.',
-      type: 'success',
-      timestamp: new Date(Date.now() - 5 * 60 * 1000), // 5 minutes ago
-      read: false,
-      icon: '🎉'
-    },
-    {
-      id: '2',
-      title: 'New Product Available',
-      message: 'Premium Cardamom is now available in the marketplace.',
-      type: 'info',
-      timestamp: new Date(Date.now() - 30 * 60 * 1000), // 30 minutes ago
-      read: false,
-      icon: '🌿'
-    },
-    {
-      id: '3',
-      title: 'Order Update',
-      message: 'Your order #12345 has been shipped.',
-      type: 'success',
-      timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
-      read: true,
-      icon: '📦'
-    }
-  ]);
+  const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [backendNotifications, setBackendNotifications] = useState([]);
 
   const addNotification = useCallback((notification) => {
     const newNotification = {
@@ -84,16 +58,120 @@ export const NotificationProvider = ({ children }) => {
     setNotifications([]);
   }, []);
 
-  const unreadCount = notifications.filter(notif => !notif.read).length;
+  // Fetch notifications from backend
+  const fetchBackendNotifications = useCallback(async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      setLoading(true);
+      const data = await getNotifications({ limit: 50 });
+      
+      // Transform backend notifications to match frontend format
+      const transformedNotifications = data.notifications.map(notif => ({
+        id: notif._id,
+        title: notif.title,
+        message: notif.message,
+        type: getNotificationType(notif.type),
+        timestamp: new Date(notif.createdAt),
+        read: notif.read,
+        icon: notif.icon,
+        data: notif.data,
+        isBackend: true
+      }));
+      
+      setBackendNotifications(transformedNotifications);
+    } catch (error) {
+      console.error('Failed to fetch notifications:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Transform backend notification types to frontend types
+  const getNotificationType = (backendType) => {
+    switch (backendType) {
+      case 'product_sold':
+      case 'payment_received':
+      case 'order_placed':
+        return 'success';
+      case 'order_cancelled':
+      case 'stock_low':
+        return 'warning';
+      default:
+        return 'info';
+    }
+  };
+
+  // Mark backend notification as read
+  const markBackendNotificationAsRead = useCallback(async (notificationId) => {
+    try {
+      await markAsReadAPI(notificationId);
+      setBackendNotifications(prev => 
+        prev.map(notif => 
+          notif.id === notificationId ? { ...notif, read: true } : notif
+        )
+      );
+    } catch (error) {
+      console.error('Failed to mark notification as read:', error);
+    }
+  }, []);
+
+  // Mark all backend notifications as read
+  const markAllBackendNotificationsAsRead = useCallback(async () => {
+    try {
+      await markAllAsReadAPI();
+      setBackendNotifications(prev => 
+        prev.map(notif => ({ ...notif, read: true }))
+      );
+    } catch (error) {
+      console.error('Failed to mark all notifications as read:', error);
+    }
+  }, []);
+
+  // Fetch notifications on mount and periodically
+  useEffect(() => {
+    fetchBackendNotifications();
+    
+    // Refresh notifications every 30 seconds
+    const interval = setInterval(fetchBackendNotifications, 30000);
+    
+    return () => clearInterval(interval);
+  }, [fetchBackendNotifications]);
+
+  // Combine frontend and backend notifications
+  const allNotifications = [...notifications, ...backendNotifications].sort(
+    (a, b) => new Date(b.timestamp) - new Date(a.timestamp)
+  );
+
+  const unreadCount = allNotifications.filter(notif => !notif.read).length;
+
+  // Enhanced markAsRead to handle both frontend and backend notifications
+  const enhancedMarkAsRead = useCallback((id) => {
+    const notification = allNotifications.find(notif => notif.id === id);
+    if (notification?.isBackend) {
+      markBackendNotificationAsRead(id);
+    } else {
+      markAsRead(id);
+    }
+  }, [allNotifications, markBackendNotificationAsRead, markAsRead]);
+
+  // Enhanced markAllAsRead to handle both frontend and backend notifications
+  const enhancedMarkAllAsRead = useCallback(() => {
+    markAllAsRead();
+    markAllBackendNotificationsAsRead();
+  }, [markAllAsRead, markAllBackendNotificationsAsRead]);
 
   const value = {
-    notifications,
+    notifications: allNotifications,
     unreadCount,
+    loading,
     addNotification,
     removeNotification,
-    markAsRead,
-    markAllAsRead,
-    clearAllNotifications
+    markAsRead: enhancedMarkAsRead,
+    markAllAsRead: enhancedMarkAllAsRead,
+    clearAllNotifications,
+    fetchBackendNotifications
   };
 
   return (

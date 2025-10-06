@@ -48,9 +48,37 @@ router.get('/', async (req, res) => {
 // Create product (farmer only) with optional image upload
 router.post('/products', requireAuth, requireRole('farmer'), upload.single('image'), async (req, res) => {
   try {
-    const { name, price, stock, grade, address, experienceYears, description } = req.body;
+    const { name, price, stock, grade, state, district, nearestHub, description } = req.body;
     if (!name || price == null || stock == null || !grade) {
       return res.status(400).json({ message: 'name, price, stock, grade are required' });
+    }
+
+    // Validate price and stock are positive numbers
+    const priceNum = Number(price);
+    const stockNum = Number(stock);
+    
+    if (isNaN(priceNum) || priceNum <= 0) {
+      return res.status(400).json({ message: 'Price must be a positive number greater than 0' });
+    }
+    
+    if (isNaN(stockNum) || stockNum < 1) {
+      return res.status(400).json({ message: 'Stock must be at least 1 kg or more' });
+    }
+
+    // Validate grade
+    if (!['Premium', 'Organic', 'Regular'].includes(grade)) {
+      return res.status(400).json({ message: 'Grade must be Premium, Organic, or Regular' });
+    }
+
+    // Validate state and district if provided
+    if (state && state.trim().length > 100) {
+      return res.status(400).json({ message: 'State name is too long' });
+    }
+    if (district && district.trim().length > 100) {
+      return res.status(400).json({ message: 'District name is too long' });
+    }
+    if (nearestHub && nearestHub.trim().length > 200) {
+      return res.status(400).json({ message: 'Nearest hub name is too long' });
     }
 
     // Build image URL if file uploaded
@@ -67,14 +95,15 @@ router.post('/products', requireAuth, requireRole('farmer'), upload.single('imag
 
     const product = await Product.create({
       user: req.user._id,
-      name,
-      price,
-      stock,
+      name: name.trim(),
+      price: priceNum,
+      stock: stockNum,
       grade,
       image: imageUrl,
-      address,
-      experienceYears,
-      description,
+      state: state?.trim(),
+      district: district?.trim(),
+      nearestHub: nearestHub?.trim(),
+      description: description?.trim(),
     });
 
     res.status(201).json(product);
@@ -104,6 +133,88 @@ router.delete('/products/:id', requireAuth, requireRole('farmer'), async (req, r
     res.json({ message: 'Deleted' });
   } catch (error) {
     console.error('Delete product error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Get farmer orders (orders containing farmer's products)
+router.get('/orders', requireAuth, requireRole('farmer'), async (req, res) => {
+  try {
+    const { status, page = 1, limit = 20 } = req.query;
+    const skip = (page - 1) * limit;
+    
+    // Import Order model
+    const { default: Order } = await import('../models/Order.js');
+    
+    // Find orders that contain products from this farmer
+    const farmerProducts = await Product.find({ user: req.user._id }).select('_id');
+    const productIds = farmerProducts.map(p => p._id);
+    
+    let query = { 'items.product': { $in: productIds } };
+    if (status && status !== 'All') {
+      query.status = status;
+    }
+    
+    const orders = await Order.find(query)
+      .populate('customer', 'username email')
+      .populate('items.product', 'name grade')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit));
+    
+    const total = await Order.countDocuments(query);
+    
+    res.json({
+      items: orders,
+      total,
+      page: parseInt(page),
+      limit: parseInt(limit),
+      pages: Math.ceil(total / limit)
+    });
+  } catch (error) {
+    console.error('Get farmer orders error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Get farmer stats
+router.get('/stats', requireAuth, requireRole('farmer'), async (req, res) => {
+  try {
+    const { default: Order } = await import('../models/Order.js');
+    
+    // Get farmer's products
+    const products = await Product.find({ user: req.user._id });
+    const productIds = products.map(p => p._id);
+    
+    // Calculate stats
+    const totalInventory = products.reduce((sum, p) => sum + (p.stock || 0), 0);
+    const totalProducts = products.length;
+    
+    // Get orders containing farmer's products
+    const orders = await Order.find({ 'items.product': { $in: productIds } });
+    const pendingOrders = orders.filter(o => o.status === 'Pending' || o.status === 'Processing').length;
+    
+    // Calculate revenue (from delivered orders)
+    const deliveredOrders = orders.filter(o => o.status === 'Delivered');
+    const monthlyRevenue = deliveredOrders.reduce((sum, order) => {
+      // Calculate revenue only from farmer's products in each order
+      const farmerItems = order.items.filter(item => productIds.some(pid => pid.equals(item.product)));
+      return sum + farmerItems.reduce((itemSum, item) => itemSum + (item.price * item.quantity), 0);
+    }, 0);
+    
+    // Calculate average rating (mock for now)
+    const averageRating = 4.8;
+    
+    res.json({
+      totalInventory,
+      totalProducts,
+      pendingOrders,
+      monthlyRevenue,
+      averageRating,
+      products: products.slice(0, 5) // Recent products
+    });
+  } catch (error) {
+    console.error('Get farmer stats error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });

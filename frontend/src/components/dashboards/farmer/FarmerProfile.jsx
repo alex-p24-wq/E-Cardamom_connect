@@ -1,4 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { getAllStates, getDistrictsForState } from "../../../data/indianStatesDistricts";
+import { getHubsByDistrict } from "../../../services/api";
 import "../../../css/FarmerDashboard.css";
 
 // Simple validators
@@ -17,7 +19,8 @@ export default function FarmerProfile({ user, onSave }) {
       fullName: user?.profile?.fullName || user?.profileData?.fullName || user?.username || "Farmer",
       email: user?.email || "",
       phone: user?.phone || "",
-      farmLocation: user?.profile?.farmLocation || user?.profileData?.farmLocation || "",
+      farmState: user?.profile?.farmState || user?.profileData?.farmState || "",
+      farmDistrict: user?.profile?.farmDistrict || user?.profileData?.farmDistrict || "",
       profileImage: user?.profile?.profileImage || null,
     };
   });
@@ -58,6 +61,10 @@ export default function FarmerProfile({ user, onSave }) {
   const [saving, setSaving] = useState(false);
   const [successMsg, setSuccessMsg] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
+  const [states] = useState(getAllStates());
+  const [districts, setDistricts] = useState([]);
+  const [hubs, setHubs] = useState([]);
+  const [loadingHubs, setLoadingHubs] = useState(false);
 
   useEffect(() => { setSuccessMsg(""); setErrorMsg(""); }, [isEditing, activeTab]);
 
@@ -78,13 +85,22 @@ export default function FarmerProfile({ user, onSave }) {
     setImagePreview(profile.profileImage || null);
   }, [profile]);
 
+  // Update districts when state changes
+  useEffect(() => {
+    if (form.farmState) {
+      const stateDistricts = getDistrictsForState(form.farmState);
+      setDistricts(stateDistricts);
+    } else {
+      setDistricts([]);
+    }
+  }, [form.farmState]);
+
   // Validation
   const validate = (data) => {
     const e = {};
     if (!data.fullName || data.fullName.trim().length < 3) e.fullName = "Full name must be at least 3 characters";
     if (!data.email || !isEmail(data.email)) e.email = "Enter a valid email";
     if (data.phone && !isPhone(data.phone)) e.phone = "Phone should be 7-15 digits";
-    if (data.farmLocation && data.farmLocation.trim().length < 3) e.farmLocation = "Farm location is too short";
     return e;
   };
 
@@ -98,9 +114,29 @@ export default function FarmerProfile({ user, onSave }) {
 
   const formIsValid = useMemo(() => Object.keys(validate(form)).length === 0, [form]);
 
-  const handleChange = (e) => {
+  const handleChange = async (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
+    
+    // Reset district when state changes
+    if (name === 'farmState') {
+      setForm((prev) => ({ ...prev, farmState: value, farmDistrict: '' }));
+      setHubs([]); // Clear hubs when state changes
+    }
+    
+    // Update hubs when district changes
+    if (name === 'farmDistrict' && value && form.farmState) {
+      setLoadingHubs(true);
+      try {
+        const districtHubs = await getHubsByDistrict(form.farmState, value);
+        setHubs(districtHubs);
+      } catch (error) {
+        console.error('Error fetching hubs:', error);
+        setHubs([]);
+      } finally {
+        setLoadingHubs(false);
+      }
+    }
   };
 
   // Image upload with preview
@@ -294,19 +330,37 @@ export default function FarmerProfile({ user, onSave }) {
                   {errors.phone && <span className="field-error" id="err-phone">{errors.phone}</span>}
                 </div>
 
-                <div className="form-group col-span-2">
-                  <label htmlFor="farmLocation">Farm Location</label>
-                  <input
-                    id="farmLocation"
-                    name="farmLocation"
-                    placeholder="Village/Area, City, State"
-                    value={form.farmLocation}
+                <div className="form-group">
+                  <label htmlFor="farmState">Farm State</label>
+                  <select
+                    id="farmState"
+                    name="farmState"
+                    value={form.farmState}
                     onChange={handleChange}
-                    aria-invalid={!!errors.farmLocation}
-                    aria-describedby={errors.farmLocation ? "err-farmLocation" : undefined}
-                  />
-                  {errors.farmLocation && <span className="field-error" id="err-farmLocation">{errors.farmLocation}</span>}
+                  >
+                    <option value="">Select State</option>
+                    {states.map(state => (
+                      <option key={state} value={state}>{state}</option>
+                    ))}
+                  </select>
                 </div>
+
+                <div className="form-group">
+                  <label htmlFor="farmDistrict">Farm District</label>
+                  <select
+                    id="farmDistrict"
+                    name="farmDistrict"
+                    value={form.farmDistrict}
+                    onChange={handleChange}
+                    disabled={!form.farmState}
+                  >
+                    <option value="">Select District</option>
+                    {districts.map(district => (
+                      <option key={district} value={district}>{district}</option>
+                    ))}
+                  </select>
+                </div>
+
 
                 <div className="form-group col-span-2">
                   <label>Profile Photo</label>
@@ -338,7 +392,8 @@ export default function FarmerProfile({ user, onSave }) {
                 <div className="detail-row"><span>Name</span><strong>{profile.fullName || "—"}</strong></div>
                 <div className="detail-row"><span>Email</span><strong>{profile.email || "—"}</strong></div>
                 <div className="detail-row"><span>Phone</span><strong>{profile.phone || "—"}</strong></div>
-                <div className="detail-row"><span>Farm Location</span><strong>{profile.farmLocation || "—"}</strong></div>
+                <div className="detail-row"><span>Farm State</span><strong>{profile.farmState || "—"}</strong></div>
+                <div className="detail-row"><span>Farm District</span><strong>{profile.farmDistrict || "—"}</strong></div>
                 <div className="form-actions">
                   <button className="edit-profile-btn" onClick={() => setIsEditing(true)}>Edit</button>
                 </div>

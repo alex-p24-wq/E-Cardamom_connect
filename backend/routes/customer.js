@@ -3,6 +3,7 @@ import Product from "../models/Product.js";
 import Order from "../models/Order.js";
 import User from "../models/User.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
+import { notifyProductSold, notifyLowStock } from "../utils/notifications.js";
 
 const router = express.Router();
 
@@ -161,10 +162,37 @@ router.post('/orders', requireAuth, requireRole('customer'), async (req, res) =>
     });
 
     // Decrement stock immediately to lock inventory and avoid shipping of deleted products
+    const newStock = Math.max(0, (product.stock || 0) - qty);
     try {
-      product.stock = Math.max(0, (product.stock || 0) - qty);
+      product.stock = newStock;
       await product.save();
     } catch (_) {}
+
+    // Send notification to farmer about product sale
+    try {
+      const customer = await User.findById(req.user._id);
+      await notifyProductSold(product.user, {
+        orderId: order._id,
+        productId: product._id,
+        customerId: req.user._id,
+        amount: amount,
+        quantity: qty,
+        productName: product.name,
+        customerName: customer?.username || 'Customer'
+      });
+
+      // Check if stock is low and send low stock notification
+      if (newStock <= 10 && newStock > 0) {
+        await notifyLowStock(product.user, {
+          productId: product._id,
+          productName: product.name,
+          stock: newStock
+        });
+      }
+    } catch (notificationError) {
+      console.error('Error sending farmer notifications:', notificationError);
+      // Don't fail the order creation if notification fails
+    }
 
     return res.status(201).json({ message: 'Order created', order });
   } catch (error) {

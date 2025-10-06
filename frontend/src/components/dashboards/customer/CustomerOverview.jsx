@@ -1,8 +1,14 @@
 import React, { useEffect, useMemo, useState } from "react";
 import "../../../css/CardamomComponents.css";
 import { getCustomerOrders, getWishlist } from "../../../services/api";
+import { useNotifications } from "../../../contexts/NotificationContext";
+import { createSuccessNotification } from "../../../utils/notifications";
+import { useToast } from "../../notifications/ToastContainer";
 
 export default function CustomerOverview({ user }) {
+  const { addNotification } = useNotifications();
+  const { showSuccess, showError } = useToast();
+  
   // Local, persisted profile and related counts
   const [profile, setProfile] = useState(() => {
     try {
@@ -114,11 +120,68 @@ export default function CustomerOverview({ user }) {
     try { return new Date(d).toLocaleDateString(); } catch { return "-"; }
   };
 
-  const featuredProducts = [
-    { id: 1, name: "Premium Green Cardamom", price: 450, image: "/images/plant11.jpeg", description: "Fresh harvest from Kerala hills" },
-    { id: 2, name: "Organic Cardamom Pods", price: 550, image: "/images/plant12.jpeg", description: "Certified organic, pesticide-free" },
-    { id: 3, name: "Special Grade Cardamom", price: 650, image: "/images/plant13.jpeg", description: "Export quality, hand-picked" },
-  ];
+  const handleAddToCart = (product) => {
+    try {
+      // Get existing cart or create new one
+      const existingCart = JSON.parse(localStorage.getItem("customerCart") || "[]");
+      
+      // Check if product already exists in cart
+      const existingItemIndex = existingCart.findIndex(item => item.id === product.id);
+      
+      if (existingItemIndex >= 0) {
+        // Increase quantity if product exists
+        existingCart[existingItemIndex].quantity += 1;
+      } else {
+        // Add new product to cart
+        existingCart.push({
+          id: product.id,
+          name: product.name,
+          price: product.price,
+          image: product.image,
+          grade: product.grade,
+          quantity: 1
+        });
+      }
+      
+      // Save updated cart
+      localStorage.setItem("customerCart", JSON.stringify(existingCart));
+      
+      // Add notification to bell icon
+      addNotification(createSuccessNotification(
+        'Added to Cart',
+        `${product.name} has been added to your cart successfully.`,
+        { icon: '🛒', autoRemove: true }
+      ));
+      
+      // Show beautiful toast notification
+      showSuccess(
+        "Added to Cart!",
+        `${product.name} has been added to your cart successfully.`,
+        { 
+          icon: "🛒",
+          duration: 3000
+        }
+      );
+    } catch (error) {
+      console.error('Failed to add to cart:', error);
+      
+      // Show error toast
+      showError(
+        "Failed to Add to Cart",
+        "Failed to add product to cart. Please try again.",
+        { 
+          icon: "❌",
+          duration: 4000
+        }
+      );
+    }
+  };
+
+  const [featuredProducts, setFeaturedProducts] = useState([
+    { id: "CARD-001", name: "Premium Green Cardamom", price: 450, image: "/images/plant11.jpeg", description: "Fresh harvest from Kerala hills", grade: "Premium" },
+    { id: "CARD-002", name: "Organic Cardamom Pods", price: 550, image: "/images/plant12.jpeg", description: "Certified organic, pesticide-free", grade: "Organic" },
+    { id: "CARD-003", name: "Special Grade Cardamom", price: 650, image: "/images/plant13.jpeg", description: "Export quality, hand-picked", grade: "Premium" },
+  ]);
 
   return (
     <div className="customer-overview">
@@ -204,7 +267,32 @@ export default function CustomerOverview({ user }) {
           <div className="dashboard-card">
             <div className="card-header">
               <h3>Featured Products</h3>
-              <button className="view-all-btn">View All</button>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button 
+                  className="view-all-btn"
+                  onClick={() => {
+                    // Add to bell icon
+                    addNotification(createSuccessNotification(
+                      'Test Notification',
+                      'This is a test notification to demonstrate the bell icon functionality!',
+                      { icon: '🔔', autoRemove: false }
+                    ));
+                    // Show beautiful toast
+                    showSuccess(
+                      "Test Notification!",
+                      "This is a beautiful toast notification! Check the bell icon too.",
+                      { 
+                        icon: "🎉",
+                        duration: 5000
+                      }
+                    );
+                  }}
+                  style={{ fontSize: '12px', padding: '4px 8px' }}
+                >
+                  Test Notifications 🔔
+                </button>
+                <button className="view-all-btn">View All</button>
+              </div>
             </div>
             <div className="card-content">
               <div className="product-grid">
@@ -219,7 +307,12 @@ export default function CustomerOverview({ user }) {
                       <p style={{ fontSize: '12px', color: '#5d4037', margin: '4px 0 8px', lineHeight: '1.3' }}>
                         {product.description}
                       </p>
-                      <button className="add-to-cart-btn">🛒 Add to Cart</button>
+                      <button 
+                        className="add-to-cart-btn"
+                        onClick={() => handleAddToCart(product)}
+                      >
+                        🛒 Add to Cart
+                      </button>
                     </div>
                   </div>
                 ))}

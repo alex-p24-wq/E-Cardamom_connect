@@ -3,8 +3,9 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useConfirmation } from '../contexts/ConfirmationContext';
 
 /**
- * Custom hook to block navigation away from protected pages
- * Only allows navigation through explicit logout action
+ * Custom hook to block browser back/forward navigation from protected pages
+ * Shows custom confirmation dialog when user tries to navigate away
+ * Does not block page refresh/close to avoid unwanted browser dialogs
  */
 export function useNavigationBlock(isEnabled = true) {
   const navigate = useNavigate();
@@ -27,18 +28,7 @@ export function useNavigationBlock(isEnabled = true) {
     return confirmed;
   }, [showConfirmation]);
 
-  const blockNavigation = useCallback((event) => {
-    if (isEnabled) {
-      // Prevent default browser navigation
-      event.preventDefault();
-      
-      // Show custom confirmation dialog
-      showLogoutConfirmation();
-      
-      // Return the message for older browsers (fallback)
-      return 'You must logout to leave the dashboard.';
-    }
-  }, [isEnabled, showLogoutConfirmation]);
+  // Removed blockNavigation function as it's no longer needed without beforeunload
 
   useEffect(() => {
     if (!isEnabled) return;
@@ -52,17 +42,8 @@ export function useNavigationBlock(isEnabled = true) {
       showLogoutConfirmation();
     };
 
-    // Block page refresh/close
-    const handleBeforeUnload = (event) => {
-      const message = 'You must logout to leave the dashboard.';
-      event.preventDefault();
-      event.returnValue = message;
-      return message;
-    };
-
-    // Add event listeners
+    // Add event listeners (removed beforeunload to prevent unwanted "Leave site?" dialog)
     window.addEventListener('popstate', handlePopState);
-    window.addEventListener('beforeunload', handleBeforeUnload);
 
     // Push current state to history to enable popstate detection
     window.history.pushState(null, '', location.pathname);
@@ -70,11 +51,8 @@ export function useNavigationBlock(isEnabled = true) {
     // Cleanup
     return () => {
       window.removeEventListener('popstate', handlePopState);
-      window.removeEventListener('beforeunload', handleBeforeUnload);
     };
   }, [isEnabled, location.pathname, showLogoutConfirmation]);
 
-  return {
-    blockNavigation
-  };
+  // Hook doesn't need to return anything - it handles navigation blocking internally
 }

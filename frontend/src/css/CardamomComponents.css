@@ -148,7 +148,7 @@
 
 .stat-details p {
   font-size: 14px;
-  color: var(--earth-light);
+  color: var(--earth-brown);
   margin: 0;
   font-weight: var(--font-weight-medium);
 }
@@ -245,7 +245,7 @@
 .empty-state {
   text-align: center;
   padding: var(--space-2xl);
-  color: var(--earth-light);
+  color: var(--earth-brown);
 }
 
 .empty-icon {
@@ -286,7 +286,8 @@
 .data-table td {
   padding: var(--space-md);
   border-bottom: 1px solid rgba(46, 125, 50, 0.08);
-  color: var(--earth-brown);
+  color: var(--cardamom-primary-dark);
+  font-weight: var(--font-weight-medium);
 }
 
 .data-table tr:hover {
@@ -320,6 +321,11 @@
 .status-badge.delivered {
   background: #d4edda;
   color: #155724;
+}
+
+.status-badge.cancelled {
+  background: #f8d7da;
+  color: #721c24;
 }
 
 /* Product Grid */
