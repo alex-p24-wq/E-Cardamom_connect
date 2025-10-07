@@ -1,45 +1,75 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import "../../../css/FarmerDashboard.css";
+import { getAgricareCatalog } from "../../../services/api";
 
-// Connect with AgriCare providers (mock list with request action)
+// Show AgriCare product catalog for farmers
 export default function ConnectAgriCare() {
-  const providers = [
-    { id: 1, name: "AgriCare Plus", services: ["Soil Testing", "Fertilizers", "Pest Control"], rating: 4.7 },
-    { id: 2, name: "GreenLine Agri", services: ["Seeds", "Equipment", "Consultation"], rating: 4.5 },
-    { id: 3, name: "CropCare Co.", services: ["Irrigation", "Organic Inputs"], rating: 4.6 },
-  ];
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [search, setSearch] = useState("");
 
-  const [requested, setRequested] = useState({});
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      setError("");
+      try {
+        const res = await getAgricareCatalog({ page: 1, limit: 24 });
+        setItems(res.items || []);
+      } catch (e) {
+        setError(e?.message || "Failed to load AgriCare catalog");
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, []);
 
-  const requestConnect = (id) => {
-    setRequested((r) => ({ ...r, [id]: true }));
-    // TODO: integrate API call
-  };
+  const filtered = items.filter(p => p.name?.toLowerCase().includes(search.toLowerCase()));
 
   return (
     <div className="dashboard-card">
-      <div className="card-header"><h3>Connect AgriCare</h3></div>
+      <div className="card-header">
+        <h3>AgriCare Catalog</h3>
+        <div className="search-bar" style={{ marginLeft: 'auto' }}>
+          <input
+            type="text"
+            placeholder="Search products..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+      </div>
       <div className="card-content">
-        <div className="products-grid">
-          {providers.map((p) => (
-            <div className="product-card" key={p.id}>
-              <div className="product-details">
-                <h3>{p.name}</h3>
-                <p>Services: {p.services.join(", ")}</p>
-                <p>Rating: {p.rating}★</p>
-                <div className="product-actions">
-                  <button 
-                    className="add-to-cart-btn" 
-                    disabled={requested[p.id]}
-                    onClick={() => requestConnect(p.id)}
-                  >
-                    {requested[p.id] ? "Requested" : "Request Connect"}
-                  </button>
+        {loading ? (
+          <p>Loading...</p>
+        ) : error ? (
+          <div className="alert-error">{error}</div>
+        ) : filtered.length === 0 ? (
+          <p>No products found</p>
+        ) : (
+          <div className="products-grid">
+            {filtered.map((p) => (
+              <div className="product-card" key={p._id || p.id}>
+                <div className="product-image" style={{ height: 160, background: '#f5f7f9', display: 'grid', placeItems: 'center' }}>
+                  {p.image ? (
+                    <img src={p.image} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    <div className="empty-img">🧪</div>
+                  )}
+                </div>
+                <div className="product-details">
+                  <h3>{p.name}</h3>
+                  <p className="product-price">₹{p.price} • Stock {p.stock}{p.type ? ` • ${p.type}` : ''}</p>
+                  {p.description && <p style={{ marginTop: 6, color: '#455a64', fontSize: 13 }}>{p.description}</p>}
+                  <div className="product-actions" style={{ marginTop: 8 }}>
+                    <button className="view-all-btn" onClick={() => alert(`Request info about ${p.name}`)}>Request Info</button>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

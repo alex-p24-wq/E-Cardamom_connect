@@ -397,6 +397,38 @@ export const getAgricareOrders = async (params = {}) => {
   }
 };
 
+export const createAgricareProduct = async (data) => {
+  try {
+    if (data instanceof FormData) {
+      const res = await api.post('/agricare/products', data, { headers: { 'Content-Type': 'multipart/form-data' } });
+      return res.data;
+    }
+    if (data && (data.image instanceof File)) {
+      const fd = new FormData();
+      Object.entries(data).forEach(([k, v]) => {
+        if (v !== undefined && v !== null) fd.append(k, v);
+      });
+      const res = await api.post('/agricare/products', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+      return res.data;
+    }
+    const res = await api.post('/agricare/products', data);
+    return res.data;
+  } catch (error) {
+    const msg = error?.response?.data?.message || error?.message || 'Failed to create agricare product';
+    throw { message: msg };
+  }
+};
+
+export const getAgricareCatalog = async (params = {}) => {
+  try {
+    const res = await api.get('/agricare/catalog', { params });
+    return res.data;
+  } catch (error) {
+    const msg = error?.response?.data?.message || error?.message || 'Failed to fetch agricare catalog';
+    throw { message: msg };
+  }
+};
+
 export const getAgricareFarmers = async (params = {}) => {
   try {
     const res = await api.get('/agricare/farmers', { params });

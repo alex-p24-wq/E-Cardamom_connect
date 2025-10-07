@@ -3,7 +3,7 @@ import DashboardLayout from "./DashboardLayout";
 import "../../css/AgriCareDashboard.css";
 import "../../css/theme-modern.css";
 import FeedbackForm from "./shared/FeedbackForm";
-import { getAgricareStats, getAgricareProducts, getAgricareOrders, getAgricareFarmers } from "../../services/api";
+import { getAgricareStats, getAgricareProducts, getAgricareOrders, getAgricareFarmers, createAgricareProduct } from "../../services/api";
 
 export default function AgriCareDashboard({ user }) {
   // Sidebar menu for AgriCare
@@ -26,6 +26,13 @@ export default function AgriCareDashboard({ user }) {
   const [farmers, setFarmers] = useState([]);
   const [stats, setStats] = useState({ products: 0, orders: 0, farmers: 0, revenue: 0 });
   const [loading, setLoading] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const emptyForm = { name: "", type: "Fertilizer", price: "", stock: "", image: "", description: "" };
+  const [form, setForm] = useState(emptyForm);
+  const [file, setFile] = useState(null);
+  const [formError, setFormError] = useState("");
+  const [preview, setPreview] = useState("");
 
   // Simple profile (persisted locally for demo)
   const [profile, setProfile] = useState(() => {
@@ -69,6 +76,68 @@ export default function AgriCareDashboard({ user }) {
 
     loadData();
   }, []);
+
+  const onFormChange = (e) => {
+    const { name, value } = e.target;
+    setForm((f) => ({ ...f, [name]: value }));
+  };
+
+  const onFileChange = (e) => {
+    const f = e.target.files?.[0] || null;
+    setFile(f);
+    try { setPreview(f ? URL.createObjectURL(f) : ""); } catch {}
+  };
+
+  const resetForm = () => {
+    setForm(emptyForm);
+    setFile(null);
+    setFormError("");
+    setPreview("");
+  };
+
+  const onAddProduct = async (e) => {
+    e.preventDefault();
+    setFormError("");
+    const price = Number(form.price);
+    const stock = Number(form.stock);
+    if (!form.name.trim()) return setFormError("Product name is required");
+    if (isNaN(price) || price <= 0) return setFormError("Price must be greater than ₹0");
+    if (!Number.isInteger(stock) || stock < 1) return setFormError("Stock must be at least 1");
+
+    setAdding(true);
+    try {
+      let payload;
+      if (file) {
+        const fd = new FormData();
+        fd.append('name', form.name.trim());
+        if (form.type) fd.append('type', form.type.trim());
+        fd.append('price', String(price));
+        fd.append('stock', String(stock));
+        if (form.description) fd.append('description', form.description.trim());
+        fd.append('image', file);
+        payload = fd;
+      } else {
+        payload = {
+          name: form.name.trim(),
+          type: form.type?.trim() || undefined,
+          price,
+          stock,
+          image: form.image?.trim() || undefined,
+          description: form.description?.trim() || undefined,
+        };
+      }
+
+      const created = await createAgricareProduct(payload);
+      setProducts((list) => [created, ...list]);
+      resetForm();
+      setShowAddModal(false);
+    } catch (err) {
+      const msg = err?.message || 'Failed to add product';
+      setFormError(msg);
+    } finally {
+      setAdding(false);
+    }
+  };
 
   const counts = useMemo(() => ({
     products: stats.products || products.length,
@@ -222,10 +291,10 @@ export default function AgriCareDashboard({ user }) {
       <div className="dashboard-card" style={{ marginBottom: 20 }}>
         <div className="card-header">
           <h3>Products</h3>
-          <button className="view-all-btn" onClick={() => alert("Add product: integrate form or modal")}>+ Add New</button>
+          <button className="view-all-btn" onClick={() => setShowAddModal(true)}>+ Add New</button>
         </div>
         <div className="card-content">
-          <div className="marketplace-controls controls-card" style={{ padding: 0, marginBottom: 16 }}>
+          <div className="marketplace-controls controls-card" style={{ padding: 12, marginBottom: 16, borderRadius: 12, background: '#f8fafc' }}>
             <div className="search-bar">
               <input type="text" placeholder="Search products..." value={searchProducts} onChange={(e) => setSearchProducts(e.target.value)} />
               <button className="search-btn">🔍</button>
@@ -239,7 +308,7 @@ export default function AgriCareDashboard({ user }) {
                 <tr>
                   <th>ID</th>
                   <th>Name</th>
-                  <th>Grade</th>
+                  <th>Type</th>
                   <th>Stock</th>
                   <th>Price</th>
                   <th>Actions</th>
@@ -247,10 +316,10 @@ export default function AgriCareDashboard({ user }) {
               </thead>
               <tbody>
                 {filteredProducts.map(p => (
-                  <tr key={p.id}>
-                    <td>{p.id}</td>
+                  <tr key={p._id || p.id}>
+                    <td>{p._id || p.id}</td>
                     <td>{p.name}</td>
-                    <td>{p.grade}</td>
+                    <td>{p.type || '-'}</td>
                     <td>{p.stock}</td>
                     <td>{formatCurrency(p.price)}</td>
                     <td>
@@ -263,6 +332,79 @@ export default function AgriCareDashboard({ user }) {
           )}
         </div>
       </div>
+      {showAddModal && (
+        <div className="modal-overlay" style={{ backdropFilter: 'blur(2px)' }}>
+          <div className="modal" style={{ width: 720, maxWidth: '95%', borderRadius: 16 }}>
+            <div className="modal-header">
+              <h3 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 20 }}>🧪</span> Add AgriCare Product
+              </h3>
+              <button className="close-btn" onClick={() => { setShowAddModal(false); resetForm(); }}>✕</button>
+            </div>
+            <div className="modal-body" style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: 16 }}>
+              {formError && <div className="alert-error" style={{ marginBottom: 12 }}>⚠️ {formError}</div>}
+              <form onSubmit={onAddProduct} className="edit-profile-form">
+                <div className="form-group">
+                  <label>Name</label>
+                  <input name="name" value={form.name} onChange={onFormChange} required />
+                </div>
+                <div className="form-group">
+                  <label>Type</label>
+                  <select name="type" value={form.type} onChange={onFormChange}>
+                    <option>Fertilizer</option>
+                    <option>Tonic</option>
+                    <option>Medicine</option>
+                    <option>Seeds</option>
+                    <option>Equipment</option>
+                    <option>Service</option>
+                    <option>Pesticide</option>
+                    <option>Fungicide</option>
+                    <option>Herbicide</option>
+                    <option>Soil Test Kit</option>
+                    <option>Other</option>
+                  </select>
+                </div>
+                <div className="form-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  <div className="form-group">
+                    <label>Price (₹)</label>
+                    <input type="number" name="price" value={form.price} min="0.01" step="0.01" onChange={onFormChange} required />
+                  </div>
+                  <div className="form-group">
+                    <label>Stock</label>
+                    <input type="number" name="stock" value={form.stock} min="1" step="1" onChange={onFormChange} required />
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label>Image (file)</label>
+                  <input type="file" accept="image/*" onChange={onFileChange} />
+                </div>
+                <div className="form-group">
+                  <label>Image URL (optional)</label>
+                  <input name="image" value={form.image} onChange={onFormChange} placeholder="https://..." />
+                </div>
+                <div className="form-group">
+                  <label>Description</label>
+                  <textarea name="description" value={form.description} onChange={onFormChange} />
+                </div>
+                <div className="form-actions">
+                  <button className="save-btn" type="submit" disabled={adding}>{adding ? 'Adding...' : 'Add Product'}</button>
+                  <button className="view-all-btn" type="button" onClick={() => { setShowAddModal(false); resetForm(); }}>Cancel</button>
+                </div>
+              </form>
+              <div className="preview-pane" style={{ paddingLeft: 8 }}>
+                <div style={{ background: '#f1f5f9', borderRadius: 12, height: 260, display: 'grid', placeItems: 'center', overflow: 'hidden' }}>
+                  {preview || form.image ? (
+                    <img src={preview || form.image} alt="preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    <div style={{ color: '#64748b' }}>Image preview</div>
+                  )}
+                </div>
+                <p style={{ marginTop: 10, color: '#64748b', fontSize: 13 }}>Tip: Add a clear product image for better visibility.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 

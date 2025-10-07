@@ -1,7 +1,36 @@
 import express from "express";
 import { requireAuth, requireRole } from "../middleware/auth.js";
+import Product from "../models/Product.js";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
+import { fileURLToPath } from "url";
 
 const router = express.Router();
+
+// Multer setup for image uploads
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const uploadDir = path.join(__dirname, "..", "uploads");
+if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, uploadDir),
+  filename: (req, file, cb) => {
+    const unique = Date.now() + '-' + Math.round(Math.random() * 1e9);
+    const ext = path.extname(file.originalname) || '.jpg';
+    cb(null, `product-${unique}${ext}`);
+  }
+});
+
+const upload = multer({
+  storage,
+  fileFilter: (req, file, cb) => {
+    if (/^image\//.test(file.mimetype)) return cb(null, true);
+    cb(new Error('Only image uploads are allowed'));
+  },
+  limits: { fileSize: 5 * 1024 * 1024 }
+});
 
 // Get all agricare providers
 router.get('/', async (req, res) => {
@@ -38,38 +67,83 @@ router.get('/stats', requireAuth, requireRole('agricare'), async (req, res) => {
   }
 });
 
-// Get agricare products
+// Create AgriCare product
+router.post('/products', requireAuth, requireRole('agricare'), upload.single('image'), async (req, res) => {
+  try {
+    const { name, type, price, stock, grade, description, image } = req.body;
+    if (!name || price == null || stock == null) {
+      return res.status(400).json({ message: 'name, price, stock are required' });
+    }
+    const priceNum = Number(price);
+    const stockNum = Number(stock);
+    if (isNaN(priceNum) || priceNum <= 0) return res.status(400).json({ message: 'Price must be > 0' });
+    if (!Number.isInteger(stockNum) || stockNum < 1) return res.status(400).json({ message: 'Stock must be integer >= 1' });
+
+    let imageUrl;
+    if (req.file) {
+      imageUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
+    } else if (image) {
+      imageUrl = String(image).trim();
+    }
+
+    const product = await Product.create({
+      user: req.user._id,
+      name: name.trim(),
+      type: type?.trim(),
+      price: priceNum,
+      stock: stockNum,
+      grade: grade || 'Premium',
+      image: imageUrl,
+      description: description?.trim(),
+    });
+
+    res.status(201).json(product);
+  } catch (error) {
+    console.error('Create agricare product error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// List current AgriCare user's products
 router.get('/products', requireAuth, requireRole('agricare'), async (req, res) => {
   try {
     const { page = 1, limit = 20, search } = req.query;
-    
-    // Mock AgriCare products - in real app, would have separate AgriCare product model
-    const mockProducts = [
-      { id: "P-101", name: "Soil Test Kit", price: 999, stock: 42, grade: "Premium" },
-      { id: "P-102", name: "Organic Fertilizer", price: 499, stock: 120, grade: "Regular" },
-      { id: "P-103", name: "Pest Control Spray", price: 299, stock: 60, grade: "Special" },
-    ];
-    
-    let filteredProducts = mockProducts;
-    if (search) {
-      filteredProducts = mockProducts.filter(p => 
-        p.name.toLowerCase().includes(search.toLowerCase())
-      );
-    }
-    
-    const startIndex = (page - 1) * limit;
-    const endIndex = startIndex + parseInt(limit);
-    const paginatedProducts = filteredProducts.slice(startIndex, endIndex);
-    
-    res.json({
-      items: paginatedProducts,
-      total: filteredProducts.length,
-      page: parseInt(page),
-      limit: parseInt(limit),
-      pages: Math.ceil(filteredProducts.length / limit)
-    });
+    const skip = (page - 1) * limit;
+    const query = { user: req.user._id };
+    if (search) query.name = { $regex: new RegExp(search, 'i') };
+
+    const [items, total] = await Promise.all([
+      Product.find(query).sort({ createdAt: -1 }).skip(parseInt(skip)).limit(parseInt(limit)),
+      Product.countDocuments(query)
+    ]);
+
+    res.json({ items, total, page: parseInt(page), limit: parseInt(limit), pages: Math.ceil(total / limit) });
   } catch (error) {
     console.error('Get agricare products error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Catalog for farmers: list all products created by AgriCare users
+router.get('/catalog', requireAuth, requireRole('farmer'), async (req, res) => {
+  try {
+    const { page = 1, limit = 20, search } = req.query;
+    const skip = (page - 1) * limit;
+    const { default: User } = await import('../models/User.js');
+    const agricareUsers = await User.find({ role: 'agricare' }).select('_id');
+    const agricareIds = agricareUsers.map(u => u._id);
+
+    const query = { user: { $in: agricareIds } };
+    if (search) query.name = { $regex: new RegExp(search, 'i') };
+
+    const [items, total] = await Promise.all([
+      Product.find(query).sort({ createdAt: -1 }).skip(parseInt(skip)).limit(parseInt(limit)),
+      Product.countDocuments(query)
+    ]);
+
+    res.json({ items, total, page: parseInt(page), limit: parseInt(limit), pages: Math.ceil(total / limit) });
+  } catch (error) {
+    console.error('Get agricare catalog error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });

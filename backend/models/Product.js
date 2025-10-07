@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 const ProductSchema = new mongoose.Schema({
   user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   name: { type: String, required: true, trim: true, minlength: 1, maxlength: 100 },
+  type: { type: String, trim: true, maxlength: 100 },
   price: { 
     type: Number, 
     required: true, 
