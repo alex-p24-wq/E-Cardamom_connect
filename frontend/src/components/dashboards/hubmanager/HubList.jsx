@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import "../../../css/CardamomComponents.css";
 import { getAllHubs } from "../../../services/api";
+import KeralaHubMap from "./KeralaHubMap";
+import { useNavigate } from "react-router-dom";
 
 export default function HubList({ user }) {
   const [hubs, setHubs] = useState([]);
@@ -11,6 +13,7 @@ export default function HubList({ user }) {
   const [filterStatus, setFilterStatus] = useState("");
   const [sortBy, setSortBy] = useState("name");
   const [sortOrder, setSortOrder] = useState("asc");
+  const navigate = useNavigate();
 
   // Load hubs data
   useEffect(() => {
@@ -72,6 +75,12 @@ export default function HubList({ user }) {
   const uniqueStates = [...new Set(hubs.map(hub => hub.state))].sort();
   const uniqueHubTypes = [...new Set(hubs.map(hub => hub.hubType))].sort();
 
+  const handleDistrictSelect = (districtName) => {
+    if (!districtName) return;
+    const encoded = encodeURIComponent(districtName);
+    navigate(`/hubs/district/${encoded}`);
+  };
+
   const handleSort = (field) => {
     if (sortBy === field) {
       setSortOrder(sortOrder === "asc" ? "desc" : "asc");
@@ -125,289 +134,11 @@ export default function HubList({ user }) {
         <div className="card-header">
           <h3>Hub Network ({hubs.length} Total Hubs)</h3>
           <div className="header-actions">
-            <button className="btn-primary">
-              📊 Hub Analytics
-            </button>
           </div>
         </div>
 
-        {/* Filters and Search */}
-        <div className="filters-section" style={{ padding: '20px', borderBottom: '1px solid #e0e0e0' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px', marginBottom: '15px' }}>
-            <div>
-              <label style={{ display: 'block', marginBottom: '5px', fontWeight: '500' }}>Search Hubs</label>
-              <input
-                type="text"
-                placeholder="Search by name, district, or contact person..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '8px 12px',
-                  border: '1px solid #ddd',
-                  borderRadius: '4px',
-                  fontSize: '14px'
-                }}
-              />
-            </div>
-
-            <div>
-              <label style={{ display: 'block', marginBottom: '5px', fontWeight: '500' }}>Filter by State</label>
-              <select
-                value={filterState}
-                onChange={(e) => setFilterState(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '8px 12px',
-                  border: '1px solid #ddd',
-                  borderRadius: '4px',
-                  fontSize: '14px'
-                }}
-              >
-                <option value="">All States</option>
-                {uniqueStates.map(state => (
-                  <option key={state} value={state}>{state}</option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label style={{ display: 'block', marginBottom: '5px', fontWeight: '500' }}>Filter by Hub Type</label>
-              <select
-                value={filterHubType}
-                onChange={(e) => setFilterHubType(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '8px 12px',
-                  border: '1px solid #ddd',
-                  borderRadius: '4px',
-                  fontSize: '14px'
-                }}
-              >
-                <option value="">All Hub Types</option>
-                {uniqueHubTypes.map(type => (
-                  <option key={type} value={type}>{type}</option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label style={{ display: 'block', marginBottom: '5px', fontWeight: '500' }}>Filter by Status</label>
-              <select
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '8px 12px',
-                  border: '1px solid #ddd',
-                  borderRadius: '4px',
-                  fontSize: '14px'
-                }}
-              >
-                <option value="">All Status</option>
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-              </select>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-            <span style={{ fontWeight: '500' }}>Sort by:</span>
-            <button
-              onClick={() => handleSort('name')}
-              style={{
-                padding: '5px 10px',
-                border: '1px solid #ddd',
-                borderRadius: '4px',
-                background: sortBy === 'name' ? '#e3f2fd' : 'white',
-                cursor: 'pointer'
-              }}
-            >
-              Name {sortBy === 'name' && (sortOrder === 'asc' ? '↑' : '↓')}
-            </button>
-            <button
-              onClick={() => handleSort('state')}
-              style={{
-                padding: '5px 10px',
-                border: '1px solid #ddd',
-                borderRadius: '4px',
-                background: sortBy === 'state' ? '#e3f2fd' : 'white',
-                cursor: 'pointer'
-              }}
-            >
-              State {sortBy === 'state' && (sortOrder === 'asc' ? '↑' : '↓')}
-            </button>
-            <button
-              onClick={() => handleSort('capacity')}
-              style={{
-                padding: '5px 10px',
-                border: '1px solid #ddd',
-                borderRadius: '4px',
-                background: sortBy === 'capacity' ? '#e3f2fd' : 'white',
-                cursor: 'pointer'
-              }}
-            >
-              Capacity {sortBy === 'capacity' && (sortOrder === 'asc' ? '↑' : '↓')}
-            </button>
-          </div>
-        </div>
-
-        <div className="card-content">
-          {filteredAndSortedHubs.length === 0 ? (
-            <div className="empty-state">
-              <div className="empty-icon">🏢</div>
-              <h3>No hubs found</h3>
-              <p>Try adjusting your search or filter criteria.</p>
-            </div>
-          ) : (
-            <div className="hub-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))', gap: '20px' }}>
-              {filteredAndSortedHubs.map((hub) => (
-                <div key={hub._id} className="hub-card" style={{
-                  border: '1px solid #e0e0e0',
-                  borderRadius: '8px',
-                  padding: '20px',
-                  background: 'white',
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-                  transition: 'transform 0.2s, box-shadow 0.2s'
-                }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '15px' }}>
-                    <div>
-                      <h4 style={{ margin: '0 0 5px 0', color: '#333', fontSize: '18px' }}>{hub.name}</h4>
-                      <div style={{
-                        display: 'inline-block',
-                        padding: '3px 8px',
-                        borderRadius: '12px',
-                        fontSize: '11px',
-                        fontWeight: '500',
-                        color: 'white',
-                        backgroundColor: getHubTypeColor(hub.hubType)
-                      }}>
-                        {hub.hubType}
-                      </div>
-                    </div>
-                    <div style={{
-                      padding: '4px 8px',
-                      borderRadius: '4px',
-                      fontSize: '12px',
-                      fontWeight: '500',
-                      backgroundColor: hub.isActive ? '#e8f5e8' : '#ffeaa7',
-                      color: hub.isActive ? '#2d5a2d' : '#b8860b'
-                    }}>
-                      {hub.isActive ? 'Active' : 'Inactive'}
-                    </div>
-                  </div>
-
-                  <div style={{ marginBottom: '15px' }}>
-                    <p style={{ margin: '0 0 8px 0', fontSize: '14px', color: '#666' }}>
-                      📍 {hub.district}, {hub.state}
-                    </p>
-                    <p style={{ margin: '0 0 8px 0', fontSize: '13px', color: '#777' }}>
-                      {hub.address}
-                    </p>
-                  </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '15px' }}>
-                    <div>
-                      <span style={{ fontSize: '12px', color: '#666' }}>Capacity</span>
-                      <p style={{ margin: '2px 0 0 0', fontWeight: '600', color: '#333' }}>
-                        📦 {formatCapacity(hub.capacity)}
-                      </p>
-                    </div>
-                    <div>
-                      <span style={{ fontSize: '12px', color: '#666' }}>Operating Hours</span>
-                      <p style={{ margin: '2px 0 0 0', fontWeight: '500', color: '#333', fontSize: '13px' }}>
-                        🕒 {hub.operatingHours}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div style={{ marginBottom: '15px' }}>
-                    <span style={{ fontSize: '12px', color: '#666' }}>Contact Person</span>
-                    <p style={{ margin: '2px 0 0 0', fontWeight: '500', color: '#333' }}>
-                      👤 {hub.contactPerson}
-                    </p>
-                    <div style={{ fontSize: '13px', color: '#666', marginTop: '4px' }}>
-                      📞 {hub.phone} | ✉️ {hub.email}
-                    </div>
-                  </div>
-
-                  <div style={{ marginBottom: '15px' }}>
-                    <span style={{ fontSize: '12px', color: '#666', marginBottom: '5px', display: 'block' }}>Services</span>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                      {hub.services.map((service, index) => (
-                        <span key={index} style={{
-                          padding: '2px 6px',
-                          borderRadius: '8px',
-                          fontSize: '10px',
-                          backgroundColor: '#f0f0f0',
-                          color: '#555'
-                        }}>
-                          {service}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'flex', gap: '8px', marginTop: '15px' }}>
-                    <button style={{
-                      flex: 1,
-                      padding: '8px 12px',
-                      border: '1px solid #2196F3',
-                      borderRadius: '4px',
-                      background: 'white',
-                      color: '#2196F3',
-                      fontSize: '12px',
-                      cursor: 'pointer'
-                    }}>
-                      View Details
-                    </button>
-                    <button style={{
-                      flex: 1,
-                      padding: '8px 12px',
-                      border: 'none',
-                      borderRadius: '4px',
-                      background: '#2196F3',
-                      color: 'white',
-                      fontSize: '12px',
-                      cursor: 'pointer'
-                    }}>
-                      Contact Hub
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Summary Statistics */}
-        <div style={{ padding: '20px', borderTop: '1px solid #e0e0e0', backgroundColor: '#f9f9f9' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '15px' }}>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#4CAF50' }}>
-                {filteredAndSortedHubs.length}
-              </div>
-              <div style={{ fontSize: '12px', color: '#666' }}>Showing Hubs</div>
-            </div>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#2196F3' }}>
-                {filteredAndSortedHubs.filter(h => h.isActive).length}
-              </div>
-              <div style={{ fontSize: '12px', color: '#666' }}>Active Hubs</div>
-            </div>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#FF9800' }}>
-                {uniqueStates.length}
-              </div>
-              <div style={{ fontSize: '12px', color: '#666' }}>States Covered</div>
-            </div>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#9C27B0' }}>
-                {Math.round(filteredAndSortedHubs.reduce((sum, hub) => sum + (hub.capacity || 0), 0) / 1000)}K
-              </div>
-              <div style={{ fontSize: '12px', color: '#666' }}>Total Capacity (kg)</div>
-            </div>
-          </div>
+        <div style={{ padding: '16px 20px', borderBottom: '1px solid #e0e0e0', background: '#fafcff' }}>
+          <KeralaHubMap onSelectDistrict={handleDistrictSelect} />
         </div>
       </div>
     </div>

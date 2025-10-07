@@ -20,7 +20,8 @@ const keralaDistrictHubs = [
     capacity: 12000,
     services: ["Storage", "Processing", "Quality Testing", "Transportation", "Export Services"],
     operatingHours: "5:00 AM - 9:00 PM",
-    hubType: "Primary Production Hub"
+    hubType: "Primary Production Hub",
+    coordinates: { latitude: 9.9167, longitude: 77.1167 }
   },
 
   // 2. Wayanad - High-Quality Cardamom Region
@@ -35,7 +36,8 @@ const keralaDistrictHubs = [
     capacity: 8000,
     services: ["Storage", "Processing", "Quality Testing", "Transportation"],
     operatingHours: "6:00 AM - 8:00 PM",
-    hubType: "Primary Production Hub"
+    hubType: "Primary Production Hub",
+    coordinates: { latitude: 11.39, longitude: 76.05 }
   },
 
   // 3. Ernakulam - Export Hub
@@ -50,7 +52,8 @@ const keralaDistrictHubs = [
     capacity: 20000,
     services: ["Storage", "Processing", "Packaging", "Quality Testing", "Export Services", "Transportation"],
     operatingHours: "24/7",
-    hubType: "Export Hub"
+    hubType: "Export Hub",
+    coordinates: { latitude: 10.00, longitude: 76.25 }
   },
 
   // 4. Palakkad - Processing Hub
@@ -65,7 +68,8 @@ const keralaDistrictHubs = [
     capacity: 7000,
     services: ["Storage", "Processing", "Packaging", "Quality Testing"],
     operatingHours: "6:00 AM - 8:00 PM",
-    hubType: "Processing Hub"
+    hubType: "Processing Hub",
+    coordinates: { latitude: 10.47, longitude: 76.39 }
   },
 
   // 5. Thiruvananthapuram - Capital Distribution Center
@@ -80,7 +84,8 @@ const keralaDistrictHubs = [
     capacity: 6000,
     services: ["Storage", "Packaging", "Transportation", "Export Services"],
     operatingHours: "7:00 AM - 7:00 PM",
-    hubType: "Distribution Hub"
+    hubType: "Distribution Hub",
+    coordinates: { latitude: 8.5241, longitude: 76.9366 }
   },
 
   // 6. Kozhikode - Northern Kerala Hub
@@ -95,7 +100,8 @@ const keralaDistrictHubs = [
     capacity: 5000,
     services: ["Storage", "Processing", "Transportation"],
     operatingHours: "6:00 AM - 8:00 PM",
-    hubType: "Regional Hub"
+    hubType: "Regional Hub",
+    coordinates: { latitude: 11.59, longitude: 75.48 }
   },
 
   // 7. Thrissur - Cultural Capital Hub
@@ -110,7 +116,8 @@ const keralaDistrictHubs = [
     capacity: 4500,
     services: ["Storage", "Quality Testing", "Transportation"],
     operatingHours: "6:30 AM - 7:30 PM",
-    hubType: "Regional Hub"
+    hubType: "Regional Hub",
+    coordinates: { latitude: 10.31, longitude: 76.12 }
   },
 
   // 8. Kollam - Coastal Hub
@@ -125,7 +132,8 @@ const keralaDistrictHubs = [
     capacity: 4000,
     services: ["Storage", "Packaging", "Transportation", "Export Services"],
     operatingHours: "6:00 AM - 8:00 PM",
-    hubType: "Port Hub"
+    hubType: "Port Hub",
+    coordinates: { latitude: 8.89, longitude: 76.55 }
   },
 
   // 9. Alappuzha - Backwater Hub
@@ -140,7 +148,8 @@ const keralaDistrictHubs = [
     capacity: 3500,
     services: ["Storage", "Processing", "Transportation"],
     operatingHours: "6:00 AM - 7:00 PM",
-    hubType: "Collection Hub"
+    hubType: "Collection Hub",
+    coordinates: { latitude: 9.5, longitude: 76.33 }
   },
 
   // 10. Kottayam - Central Kerala Hub
@@ -155,7 +164,8 @@ const keralaDistrictHubs = [
     capacity: 4000,
     services: ["Storage", "Quality Testing", "Transportation"],
     operatingHours: "6:30 AM - 7:30 PM",
-    hubType: "Regional Hub"
+    hubType: "Regional Hub",
+    coordinates: { latitude: 9.36, longitude: 76.34 }
   },
 
   // 11. Pathanamthitta - Hill Station Hub
@@ -170,7 +180,8 @@ const keralaDistrictHubs = [
     capacity: 3000,
     services: ["Storage", "Processing", "Transportation"],
     operatingHours: "6:00 AM - 7:00 PM",
-    hubType: "Collection Hub"
+    hubType: "Collection Hub",
+    coordinates: { latitude: 9.26, longitude: 76.78 }
   },
 
   // 12. Malappuram - Northern Malabar Hub
@@ -185,7 +196,8 @@ const keralaDistrictHubs = [
     capacity: 3500,
     services: ["Storage", "Processing", "Transportation"],
     operatingHours: "6:00 AM - 8:00 PM",
-    hubType: "Regional Hub"
+    hubType: "Regional Hub",
+    coordinates: { latitude: 11.03, longitude: 76.07 }
   },
 
   // 13. Kannur - Malabar Coast Hub
@@ -200,7 +212,8 @@ const keralaDistrictHubs = [
     capacity: 3000,
     services: ["Storage", "Transportation", "Export Services"],
     operatingHours: "6:00 AM - 8:00 PM",
-    hubType: "Port Hub"
+    hubType: "Port Hub",
+    coordinates: { latitude: 11.87, longitude: 75.37 }
   },
 
   // 14. Kasaragod - Northern Border Hub

@@ -10,6 +10,7 @@ import { NotificationProvider } from "./contexts/NotificationContext.jsx";
 import { ConfirmationProvider } from "./contexts/ConfirmationContext.jsx";
 import { ToastProvider } from "./components/notifications/ToastContainer.jsx";
 import "./App.css";
+import HubDistrictPage from "./pages/HubDistrictPage.jsx";
 
 export default function App() {
   return (
@@ -36,6 +37,14 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/hubs/district/:district"
+            element={
+              <ProtectedRoute>
+                <HubDistrictPage />
+              </ProtectedRoute>
+            }
+          />
           <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </ToastProvider>
@@ -43,3 +52,4 @@ export default function App() {
     </NotificationProvider>
   );
 }
+

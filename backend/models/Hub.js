@@ -56,6 +56,18 @@ const HubSchema = new mongoose.Schema({
     trim: true,
     maxlength: 100
   },
+  coordinates: {
+    latitude: {
+      type: Number,
+      min: -90,
+      max: 90
+    },
+    longitude: {
+      type: Number,
+      min: -180,
+      max: 180
+    }
+  },
   hubType: {
     type: String,
     enum: ['Primary Production Hub', 'Regional Hub', 'Export Hub', 'Processing Hub', 'Distribution Hub', 'Collection Hub', 'Metropolitan Hub', 'Technology Hub', 'Port Hub', 'Commercial Hub', 'Border Hub'],
