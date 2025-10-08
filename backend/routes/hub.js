@@ -1,6 +1,9 @@
 import express from "express";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import Hub from "../models/Hub.js";
+import HubActivity from "../models/HubActivity.js";
+import { sendProductArrivedAtHubEmail, sendHubArrivalOTPEmail } from "../utils/emailService.js";
+import crypto from "crypto";
 
 const router = express.Router();
 
@@ -215,6 +218,200 @@ router.get('/stats', requireAuth, requireRole(['admin', 'hub']), async (req, res
     });
   } catch (error) {
     console.error('Get hub stats error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Get sold product activities by district (public)
+router.get('/activities/by-district/:state/:district', async (req, res) => {
+  try {
+    const { state, district } = req.params;
+    if (!state || !district) {
+      return res.status(400).json({ message: 'state and district are required' });
+    }
+
+    const activities = await HubActivity.find({
+      type: 'sold',
+      state,
+      district
+    })
+      .select('product order farmer customer quantity amount createdAt hubArrivalConfirmed hubArrivalConfirmedAt customerNotified')
+      .populate('farmer', 'name email phone')
+      .populate('customer', 'name email phone')
+      .populate('product', 'name grade price')
+      .sort({ createdAt: -1 })
+      .limit(100);
+
+    res.json({ items: activities });
+  } catch (error) {
+    console.error('Get hub activities by district error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Generate OTP for hub arrival confirmation (any authenticated user can request)
+router.post('/activities/:activityId/generate-otp', requireAuth, async (req, res) => {
+  try {
+    const { activityId } = req.params;
+    
+    const activity = await HubActivity.findById(activityId)
+      .populate('farmer', 'name email')
+      .populate('customer', 'name email')
+      .populate('product', 'name grade');
+    
+    if (!activity) {
+      return res.status(404).json({ message: 'Activity not found' });
+    }
+    
+    // Check if already confirmed
+    if (activity.hubArrivalConfirmed) {
+      return res.status(400).json({ message: 'Product arrival already confirmed' });
+    }
+    
+    // Generate 6-digit OTP
+    const otp = crypto.randomInt(100000, 999999).toString();
+    const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+    
+    // Save OTP to activity
+    activity.hubArrivalOTP = otp;
+    activity.hubArrivalOTPExpiry = otpExpiry;
+    await activity.save();
+    
+    console.log(`✅ OTP generated for activity ${activityId}: ${otp}`);
+    
+    // Send OTP to farmer's email
+    console.log(`📧 Attempting to send OTP to farmer...`);
+    console.log(`   Farmer: ${activity.farmer?.name}`);
+    console.log(`   Email: ${activity.farmer?.email}`);
+    console.log(`   Product: ${activity.product?.name}`);
+    console.log(`   OTP: ${otp}`);
+    
+    if (activity.farmer && activity.farmer.email) {
+      const productName = activity.product?.name || 'Cardamom Product';
+      
+      try {
+        const emailResult = await sendHubArrivalOTPEmail(
+          activity.farmer.email,
+          activity.farmer.name,
+          otp,
+          productName
+        );
+        
+        console.log(`📧 Email send result:`, emailResult);
+        
+        if (emailResult.success) {
+          console.log(`✅ OTP email sent successfully to farmer: ${activity.farmer.email}`);
+        } else {
+          console.error(`❌ Failed to send OTP email: ${emailResult.error}`);
+          return res.status(500).json({ 
+            message: `Failed to send OTP email: ${emailResult.error}` 
+          });
+        }
+      } catch (emailError) {
+        console.error(`❌ Exception while sending OTP email:`, emailError);
+        return res.status(500).json({ 
+          message: `Error sending OTP email: ${emailError.message}` 
+        });
+      }
+    } else {
+      console.error(`❌ Farmer email not found!`);
+      return res.status(400).json({ 
+        message: 'Farmer email not found. Cannot send OTP.' 
+      });
+    }
+    
+    res.json({ 
+      success: true, 
+      message: `OTP has been sent to your registered email: ${activity.farmer.email}`,
+      email: activity.farmer.email,
+      expiresIn: '10 minutes'
+    });
+  } catch (error) {
+    console.error('Generate OTP error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Verify OTP and confirm hub arrival (any authenticated user can verify)
+router.post('/activities/:activityId/verify-otp', requireAuth, async (req, res) => {
+  try {
+    const { activityId } = req.params;
+    const { otp } = req.body;
+    
+    if (!otp) {
+      return res.status(400).json({ message: 'OTP is required' });
+    }
+    
+    const activity = await HubActivity.findById(activityId)
+      .populate('farmer', 'name email')
+      .populate('customer', 'name email')
+      .populate('product', 'name grade');
+    
+    if (!activity) {
+      return res.status(404).json({ message: 'Activity not found' });
+    }
+    
+    // Check if already confirmed
+    if (activity.hubArrivalConfirmed) {
+      return res.status(400).json({ message: 'Product arrival already confirmed' });
+    }
+    
+    // Check if OTP exists
+    if (!activity.hubArrivalOTP) {
+      return res.status(400).json({ message: 'No OTP generated. Please generate OTP first' });
+    }
+    
+    // Check if OTP expired
+    if (new Date() > activity.hubArrivalOTPExpiry) {
+      return res.status(400).json({ message: 'OTP has expired. Please generate a new one' });
+    }
+    
+    // Verify OTP
+    if (activity.hubArrivalOTP !== otp.trim()) {
+      return res.status(400).json({ message: 'Invalid OTP' });
+    }
+    
+    // Mark as confirmed
+    activity.hubArrivalConfirmed = true;
+    activity.hubArrivalConfirmedAt = new Date();
+    activity.hubArrivalConfirmedBy = req.user.userId;
+    activity.hubArrivalOTP = undefined; // Clear OTP
+    activity.hubArrivalOTPExpiry = undefined;
+    await activity.save();
+    
+    // Send email notification to customer
+    if (activity.customer && activity.customer.email) {
+      const orderData = {
+        productName: activity.product?.name || 'Cardamom',
+        farmerName: activity.farmer?.name || 'Farmer',
+        quantity: activity.quantity || 0,
+        orderIdShort: String(activity.order).slice(-8),
+        hubLocation: `${activity.district}, ${activity.state}`
+      };
+      
+      const emailResult = await sendProductArrivedAtHubEmail(
+        activity.customer.email,
+        activity.customer.name,
+        orderData
+      );
+      
+      if (emailResult.success) {
+        activity.customerNotified = true;
+        await activity.save();
+        console.log(`✅ Customer notification sent to ${activity.customer.email}`);
+      } else {
+        console.error(`❌ Failed to send customer notification: ${emailResult.error}`);
+      }
+    }
+    
+    res.json({ 
+      success: true, 
+      message: 'Product arrival confirmed successfully. Customer has been notified.',
+      confirmedAt: activity.hubArrivalConfirmedAt,
+      customerNotified: activity.customerNotified
+    });
+  } catch (error) {
+    console.error('Verify OTP error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });

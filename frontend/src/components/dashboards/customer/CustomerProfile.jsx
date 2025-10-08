@@ -17,7 +17,7 @@ export default function CustomerProfile({ user }) {
       // ignore parse errors
     }
     return {
-      fullName: user?.profile?.fullName || "John Doe",
+      fullName: user?.profile?.fullName || user?.username || "",
       email: user?.email || "",
       phone: user?.phone || "",
       address: user?.profile?.address || "",
@@ -25,12 +25,10 @@ export default function CustomerProfile({ user }) {
       profileImage: user?.profile?.profileImage || null, // data URL or absolute path
     };
   });
-
-  const [activeTab, setActiveTab] = useState("personal");
-  const [isEditing, setIsEditing] = useState(false);
-
   const [formData, setFormData] = useState({ ...profileData });
   const [imagePreview, setImagePreview] = useState(profileData.profileImage || null);
+  const [activeTab, setActiveTab] = useState("personal");
+  const [isEditing, setIsEditing] = useState(false);
 
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);

@@ -4,6 +4,7 @@ import Order from "../models/Order.js";
 import User from "../models/User.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { notifyProductSold, notifyLowStock } from "../utils/notifications.js";
+import HubActivity from "../models/HubActivity.js";
 
 const router = express.Router();
 
@@ -180,6 +181,24 @@ router.post('/orders', requireAuth, requireRole('customer'), async (req, res) =>
         productName: product.name,
         customerName: customer?.username || 'Customer'
       });
+
+      // Record HubActivity for this sale so hubs can show sold product IDs per district
+      try {
+        await HubActivity.create({
+          type: 'sold',
+          state: product.state || 'Unknown',
+          district: product.district || 'Unknown',
+          nearestHub: product.nearestHub,
+          product: product._id,
+          order: order._id,
+          farmer: product.user,
+          customer: req.user._id,
+          quantity: qty,
+          amount: amount
+        });
+      } catch (e) {
+        console.warn('Failed to record HubActivity:', e?.message || e);
+      }
 
       // Check if stock is low and send low stock notification
       if (newStock <= 10 && newStock > 0) {

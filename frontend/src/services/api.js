@@ -542,12 +542,45 @@ export const getAllHubs = async (params = {}) => {
   }
 };
 
+// Hub activities: sold products by district
+export const getHubActivitiesByDistrict = async (state, district) => {
+  try {
+    const res = await api.get(`/hubs/activities/by-district/${encodeURIComponent(state)}/${encodeURIComponent(district)}`);
+    return res.data;
+  } catch (error) {
+    const msg = error?.response?.data?.message || error?.message || 'Failed to get hub activities';
+    throw { message: msg };
+  }
+};
+
 export const createHub = async (hubData) => {
   try {
     const res = await api.post('/hubs', hubData);
     return res.data;
   } catch (error) {
     const msg = error?.response?.data?.message || error?.message || 'Failed to create hub';
+    throw { message: msg };
+  }
+};
+
+// Generate OTP for hub arrival confirmation
+export const generateHubArrivalOTP = async (activityId) => {
+  try {
+    const res = await api.post(`/hubs/activities/${activityId}/generate-otp`);
+    return res.data;
+  } catch (error) {
+    const msg = error?.response?.data?.message || error?.message || 'Failed to generate OTP';
+    throw { message: msg };
+  }
+};
+
+// Verify OTP for hub arrival confirmation
+export const verifyHubArrivalOTP = async (activityId, otp) => {
+  try {
+    const res = await api.post(`/hubs/activities/${activityId}/verify-otp`, { otp });
+    return res.data;
+  } catch (error) {
+    const msg = error?.response?.data?.message || error?.message || 'Failed to verify OTP';
     throw { message: msg };
   }
 };
