@@ -42,6 +42,7 @@ import feedbackRoutes from "./routes/feedback.js";
 import paymentRoutes from "./routes/payment.js";
 import notificationRoutes from "./routes/notifications.js";
 import hubRoutes from "./routes/hub.js";
+import orderRequestRoutes from "./routes/orderRequest.js";
 import Feedback from "./models/Feedback.js";
 import { verifyEmailConfig } from "./utils/emailService.js";
 
@@ -55,6 +56,7 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/payment", paymentRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/hubs", hubRoutes);
+app.use("/api/order-requests", orderRequestRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -108,12 +110,20 @@ const startServer = async () => {
       });
     };
 
-    // Ensure indexes for Feedback are created (this also creates the collection on first run)
+    // Ensure indexes for Feedback and OrderRequest are created
     try {
       await Feedback.init();
       console.log('✅ Feedback indexes ensured');
     } catch (e) {
       console.warn('⚠️ Could not ensure Feedback indexes:', e?.message || e);
+    }
+
+    try {
+      const OrderRequest = (await import('./models/OrderRequest.js')).default;
+      await OrderRequest.init();
+      console.log('✅ OrderRequest indexes ensured');
+    } catch (e) {
+      console.warn('⚠️ Could not ensure OrderRequest indexes:', e?.message || e);
     }
 
     // Verify email configuration

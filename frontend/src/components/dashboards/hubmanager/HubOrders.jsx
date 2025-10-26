@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { useNotifications } from '../../../contexts/NotificationContext';
+import { HubNetworkContext } from '../../../contexts/HubNetworkContext';
 
 export default function HubOrders({ hubData }) {
   const { addNotification } = useNotifications();
+  const { addAcceptedRequest } = useContext(HubNetworkContext);
   const [orders, setOrders] = useState([]);
   const [filteredOrders, setFilteredOrders] = useState([]);
   const [activeTab, setActiveTab] = useState('all');
@@ -140,22 +142,37 @@ export default function HubOrders({ hubData }) {
         break;
       case 'complete':
         updateOrderStatus(order.id, 'Shipped');
-        break;
       default:
         break;
     }
   };
 
-  const updateOrderStatus = (orderId, newStatus) => {
-    setOrders(prevOrders =>
-      prevOrders.map(order =>
+  const handleStatusChange = (orderId, newStatus) => {
+    // In a real app, this would be an API call
+    setOrders(prevOrders => {
+      const updatedOrders = prevOrders.map(order =>
         order.id === orderId ? { ...order, status: newStatus } : order
-      )
-    );
+      );
+      
+      // If order is being accepted, add to hub network
+      if (newStatus === 'Accepted') {
+        const acceptedOrder = updatedOrders.find(order => order.id === orderId);
+        if (acceptedOrder) {
+          addAcceptedRequest({
+            ...acceptedOrder,
+            acceptedDate: new Date().toISOString(),
+            hubDistrict: hubData.district
+          });
+        }
+      }
+      
+      return updatedOrders;
+    });
+    
     addNotification({
       type: 'success',
       title: 'Order Updated',
-      message: `Order ${orderId} status changed to ${newStatus}`
+      message: `Order ${orderId} status updated to ${newStatus}`
     });
   };
 

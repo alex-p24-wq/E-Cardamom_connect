@@ -4,6 +4,8 @@ import { useNotifications } from "../../../contexts/NotificationContext";
 import { notificationTemplates, createErrorNotification } from "../../../utils/notifications";
 import { getAllStates, getDistrictsForState } from "../../../data/indianStatesDistricts";
 import { getHubsByDistrict } from "../../../services/api";
+import ProductTypeModal from "../../modals/ProductTypeModal";
+import BulkProductManager from "./BulkProductManager";
 import "../../../css/CardamomComponents.css";
 import "../../../css/FarmerComponents.css";
 
@@ -34,6 +36,9 @@ export default function ProductManager() {
   const [districts, setDistricts] = useState([]);
   const [hubs, setHubs] = useState([]);
   const [loadingHubs, setLoadingHubs] = useState(false);
+  const [showProductTypeModal, setShowProductTypeModal] = useState(false);
+  const [showForm, setShowForm] = useState(false);
+  const [showBulkManager, setShowBulkManager] = useState(false);
 
   // Load current farmer's products
   useEffect(() => {
@@ -98,6 +103,24 @@ export default function ProductManager() {
     setPreviewUrl("");
   };
 
+  const handleAddProductClick = () => {
+    setShowProductTypeModal(true);
+  };
+
+  const handleSelectDomestic = () => {
+    setShowProductTypeModal(false);
+    setShowForm(true);
+  };
+
+  const handleSelectBulk = () => {
+    setShowProductTypeModal(false);
+    setShowBulkManager(true);
+  };
+
+  const handleCloseModal = () => {
+    setShowProductTypeModal(false);
+  };
+
   const addProduct = async (e) => {
     e.preventDefault();
     setError("");
@@ -116,8 +139,8 @@ export default function ProductManager() {
       return;
     }
     
-    if (isNaN(stock) || stock < 1 || !Number.isInteger(stock)) {
-      setError("Stock must be at least 1 kg (whole number)");
+    if (isNaN(stock) || stock < 1 || stock > 20 || !Number.isInteger(stock)) {
+      setError("Stock must be between 1-20 kg (whole number)");
       return;
     }
     
@@ -193,16 +216,39 @@ export default function ProductManager() {
   return (
     <div className="dashboard-card">
       <div className="card-header">
-        <h3>Add Product</h3>
+        <h3>
+          {showBulkManager ? "Bulk Product Management" :
+           showForm ? "Add Domestic Product" :
+           "Add Product"}
+        </h3>
+        {showForm && (
+          <button className="btn-ghost" onClick={() => setShowForm(false)}>
+            ← Back to Selection
+          </button>
+        )}
+        {showBulkManager && (
+          <button className="btn-ghost" onClick={() => setShowBulkManager(false)}>
+            ← Back to Selection
+          </button>
+        )}
+        {!showForm && !showBulkManager && (
+          <button className="btn-primary" onClick={handleAddProductClick}>
+            Add New Product
+          </button>
+        )}
       </div>
       <div className="card-content pm-section">
-        {/* Decorative and friendly hero */}
-        <div className="pm-hero">
-          <div>
-            <h2 className="pm-hero-title">🌿 Share Your Cardamom Harvest</h2>
-            <p className="pm-hero-sub">Connect with buyers and showcase your premium cardamom. Fill the details below and watch your product come to life.</p>
-          </div>
-        </div>
+        {showBulkManager ? (
+          <BulkProductManager />
+        ) : showForm ? (
+          <>
+            {/* Decorative and friendly hero */}
+            <div className="pm-hero">
+              <div>
+                <h2 className="pm-hero-title">🌿 Share Your Cardamom Harvest</h2>
+                <p className="pm-hero-sub">Connect with buyers and showcase your premium cardamom. Fill the details below and watch your product come to life.</p>
+              </div>
+            </div>
 
         <div className="pm-grid">
           {/* Form */}
@@ -218,8 +264,8 @@ export default function ProductManager() {
             </div>
             <div className="pm-field">
               <label>Stock (kg)</label>
-              <input type="number" name="stock" value={form.stock} onChange={handleChange} min="1" step="1" required />
-              <small style={{ color: '#666', fontSize: '12px' }}>Must be at least 1 kg</small>
+              <input type="number" name="stock" value={form.stock} onChange={handleChange} min="1" max="20" step="1" required />
+              <small style={{ color: '#666', fontSize: '12px' }}>Must be between 1-20 kg</small>
             </div>
             <div className="pm-field">
               <label>Grade</label>
@@ -317,6 +363,16 @@ export default function ProductManager() {
             </div>
           </div>
         </div>
+        </>
+        ) : (
+          <div className="pm-empty-state">
+            <div className="empty-state-content">
+              <div className="empty-icon">🛒</div>
+              <h3>Ready to Add Your First Product?</h3>
+              <p>Click the "Add New Product" button above to get started.</p>
+            </div>
+          </div>
+        )}
 
         {/* Existing products */}
         <div className="pm-products">
@@ -356,6 +412,13 @@ export default function ProductManager() {
           )}
         </div>
       </div>
+
+      <ProductTypeModal
+        isOpen={showProductTypeModal}
+        onClose={handleCloseModal}
+        onSelectDomestic={handleSelectDomestic}
+        onSelectBulk={handleSelectBulk}
+      />
     </div>
   );
 }

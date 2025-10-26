@@ -7,6 +7,7 @@ import "../../css/theme-modern.css";
 import CustomerOverview from "./customer/CustomerOverview";
 import CustomerOrders from "./customer/CustomerOrders";
 import CustomerMarketplace from "./customer/CustomerMarketplace";
+import CustomerRequestOrder from "./customer/CustomerRequestOrder";
 import CustomerWishlist from "./customer/CustomerWishlist";
 import CustomerProfile from "./customer/CustomerProfile";
 import CustomerFeedback from "./customer/CustomerFeedback";
@@ -23,6 +24,7 @@ export default function CustomerDashboard({ user }) {
   const menuItems = [
     { id: "overview", label: "Overview", icon: "📊" },
     { id: "marketplace", label: "Marketplace", icon: "🛒" },
+    { id: "request-order", label: "Request Order", icon: "📝" },
     { id: "orders", label: "My Orders", icon: "📦" },
     { id: "wishlist", label: "Wishlist", icon: "❤️" },
     { id: "feedback", label: "Feedback", icon: "💬" },
@@ -36,6 +38,8 @@ export default function CustomerDashboard({ user }) {
         return <CustomerOverview user={user} />;
       case "marketplace":
         return <CustomerMarketplace user={user} />;
+      case "request-order":
+        return <CustomerRequestOrder user={user} />;
       case "orders":
         return <CustomerOrders user={user} />;
       case "wishlist":

@@ -4,6 +4,7 @@ import "../../css/HubDashboard.css";
 import "../../css/theme-modern.css";
 import HubOverview from "./hub/HubOverview";
 import HubList from "./hubmanager/HubList";
+import HubBulkProducts from "./hubmanager/HubBulkProducts";
 import FeedbackForm from "./shared/FeedbackForm";
 
 export default function HubDashboard({ user }) {
@@ -12,6 +13,7 @@ export default function HubDashboard({ user }) {
   // Menu items for hub dashboard
   const menuItems = [
     { id: "overview", label: "Overview", icon: "📊" },
+    { id: "bulkproducts", label: "Bulk Products", icon: "📦" },
     { id: "hublist", label: "Hub Network", icon: "🏢" },
     { id: "farmers", label: "Farmers", icon: "👨‍🌾" },
     { id: "customers", label: "Customers", icon: "👥" },
@@ -24,6 +26,8 @@ export default function HubDashboard({ user }) {
     switch (activePage) {
       case "overview":
         return <HubOverview user={user} />;
+      case "bulkproducts":
+        return <HubBulkProducts user={user} />;
       case "hublist":
         return <HubList user={user} />;
       case "farmers":

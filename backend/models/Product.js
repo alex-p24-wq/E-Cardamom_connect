@@ -31,6 +31,7 @@ const ProductSchema = new mongoose.Schema({
   state: { type: String, trim: true, maxlength: 100 },
   district: { type: String, trim: true, maxlength: 100 },
   nearestHub: { type: String, trim: true, maxlength: 200 },
+  hubId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hub' }, // Reference to the hub for bulk products
   description: { type: String, trim: true, maxlength: 500 },
   createdAt: { type: Date, default: Date.now }
 });

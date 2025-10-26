@@ -18,23 +18,37 @@ router.get('/', async (_req, res) => {
   }
 });
 
-// Public: list products added by farmers
+// Public: list products added by farmers (exclude bulk products)
 // Optional query params: grade=Premium|Organic|Regular, q=search, limit, page
 router.get('/products', async (req, res) => {
   try {
     const { grade, q, limit = 50, page = 1 } = req.query;
 
-    const filter = {};
+    const filter = {
+      // Exclude bulk products - only show regular/domestic products to customers
+      $or: [
+        { type: { $exists: false } },
+        { type: { $ne: 'Bulk' } }
+      ]
+    };
     if (grade && ["Premium", "Organic", "Regular"].includes(grade)) {
       filter.grade = grade;
     }
     if (q) {
       const regex = new RegExp(q, 'i');
-      filter.$or = [
-        { name: regex },
-        { description: regex },
-        { address: regex },
+      filter.$and = [
+        { $or: [
+          { type: { $exists: false } },
+          { type: { $ne: 'Bulk' } }
+        ]},
+        { $or: [
+          { name: regex },
+          { description: regex },
+          { address: regex },
+        ]}
       ];
+      // Remove the top-level $or since we're using $and now
+      delete filter.$or;
     }
 
     const lim = Math.min(parseInt(limit, 10) || 50, 100);

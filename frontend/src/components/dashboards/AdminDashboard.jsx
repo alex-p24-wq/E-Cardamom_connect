@@ -26,6 +26,7 @@ import SearchBar from "../ui/SearchBar";
 import QuickActions from "../ui/QuickActions";
 import AreaLineChart from "../charts/AreaLineChart";
 import AdminFeedbackTable from "../reports/AdminFeedbackTable";
+import AdminRequests from "./admin/AdminRequests";
 
 export default function AdminDashboard({ user }) {
   const menuItems = [
@@ -33,6 +34,7 @@ export default function AdminDashboard({ user }) {
     { id: "users", label: "Users", icon: "👥" },
     { id: "products", label: "Products", icon: "📦" },
     { id: "orders", label: "Orders", icon: "🛒" },
+    { id: "requests", label: "Customer Requests", icon: "📝" },
     { id: "hubs", label: "Hubs", icon: "🏢" },
     { id: "reports", label: "Reports", icon: "📈" },
     { id: "settings", label: "Settings", icon: "⚙️" },
@@ -491,10 +493,14 @@ export default function AdminDashboard({ user }) {
     </div>
   );
 
+  // Customer Requests: show all customer product requests
+  const renderRequests = () => <AdminRequests user={user} />;
+
   const body = useMemo(() => {
     if (active === "users") return renderUsers();
     if (active === "products") return renderProducts();
     if (active === "orders") return renderOrders();
+    if (active === "requests") return renderRequests();
     if (active === "hubs") return renderHubs();
     if (active === "reports") return renderReports();
     if (active === "settings") return renderSettings();

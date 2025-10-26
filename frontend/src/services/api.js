@@ -37,26 +37,47 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Global response interceptor: auto-logout on 401/403
+// Global response interceptor: auto-logout on 401/403 for authenticated endpoints only
 api.interceptors.response.use(
   (res) => res,
   async (error) => {
     const status = error?.response?.status;
-    if (status === 401 || status === 403) {
-      try {
-        const { logout } = await import('../services/auth');
-        await logout();
-      } catch (_) {}
-      // Redirect to login with intended path
-      try {
-        const current = window.location.pathname + window.location.search;
-        const redirect = encodeURIComponent(current);
-        if (!/\/login/i.test(window.location.pathname)) {
+    const config = error?.config;
+    
+    // Only trigger auto-logout for 401/403 if:
+    // 1. The request included an Authorization header (meaning it was an authenticated request)
+    // 2. We're not already on the login page
+    // 3. The error is specifically about authentication (not a general server error)
+    if ((status === 401 || status === 403) && 
+        config?.headers?.Authorization && 
+        !/\/login/i.test(window.location.pathname)) {
+      
+      // Check if this is a real auth error vs server/network issue
+      const errorMessage = error?.response?.data?.message?.toLowerCase() || '';
+      const isAuthError = errorMessage.includes('token') || 
+                         errorMessage.includes('unauthorized') || 
+                         errorMessage.includes('expired') ||
+                         status === 401; // 401 is always auth-related
+      
+      // Don't auto-logout on role-based 403 errors (insufficient role)
+      const isRoleError = status === 403 && errorMessage.includes('insufficient role');
+      
+      if (isAuthError && !isRoleError) {
+        try {
+          const { logout } = await import('../services/auth');
+          await logout();
+        } catch (_) {}
+        
+        // Redirect to login with intended path
+        try {
+          const current = window.location.pathname + window.location.search;
+          const redirect = encodeURIComponent(current);
           window.location.replace(`/login?redirect=${redirect}`);
-        }
-      } catch (_) {}
-      // Soft signal to callers that auth is gone
-      error.isAuthError = true;
+        } catch (_) {}
+        
+        // Soft signal to callers that auth is gone
+        error.isAuthError = true;
+      }
     }
     return Promise.reject(error);
   }
@@ -581,6 +602,89 @@ export const verifyHubArrivalOTP = async (activityId, otp) => {
     return res.data;
   } catch (error) {
     const msg = error?.response?.data?.message || error?.message || 'Failed to verify OTP';
+    throw { message: msg };
+  }
+};
+
+// Order Request services
+export const createOrderRequest = async (requestData) => {
+  try {
+    const res = await api.post('/order-requests', requestData);
+    return res.data;
+  } catch (error) {
+    const msg = error?.response?.data?.message || error?.message || 'Failed to create order request';
+    throw { message: msg };
+  }
+};
+
+export const getCustomerOrderRequests = async (params = {}) => {
+  try {
+    const res = await api.get('/order-requests/my-requests', { params });
+    return res.data;
+  } catch (error) {
+    const msg = error?.response?.data?.message || error?.message || 'Failed to fetch order requests';
+    throw { message: msg };
+  }
+};
+
+export const getHubOrderRequests = async (params = {}) => {
+  try {
+    const res = await api.get('/order-requests/hub-requests', { params });
+    return res.data;
+  } catch (error) {
+    const msg = error?.response?.data?.message || error?.message || 'Failed to fetch hub requests';
+    throw { message: msg };
+  }
+};
+
+// Admin: Get all customer order requests
+export const getAdminOrderRequests = async (params = {}) => {
+  try {
+    const res = await api.get('/order-requests/admin-requests', { params });
+    return res.data;
+  } catch (error) {
+    const msg = error?.response?.data?.message || error?.message || 'Failed to fetch admin requests';
+    throw { message: msg };
+  }
+};
+
+export const updateOrderRequestStatus = async (requestId, status, message) => {
+  try {
+    const res = await api.patch(`/order-requests/${requestId}/status`, { status, message });
+    return res.data;
+  } catch (error) {
+    const msg = error?.response?.data?.message || error?.message || 'Failed to update request status';
+    throw { message: msg };
+  }
+};
+
+export const getOrderRequestById = async (requestId) => {
+  try {
+    const res = await api.get(`/order-requests/${requestId}`);
+    return res.data;
+  } catch (error) {
+    const msg = error?.response?.data?.message || error?.message || 'Failed to fetch order request';
+    throw { message: msg };
+  }
+};
+
+export const deleteOrderRequest = async (requestId) => {
+  try {
+    const res = await api.delete(`/order-requests/${requestId}`);
+    return res.data;
+  } catch (error) {
+    const msg = error?.response?.data?.message || error?.message || 'Failed to delete order request';
+    throw { message: msg };
+  }
+};
+
+// Debug function to check current user
+export const getCurrentUser = async () => {
+  try {
+    const res = await api.get('/order-requests/debug/current-user');
+    return res.data;
+  } catch (error) {
+    const msg = error?.response?.data?.message || error?.message || 'Failed to get current user';
     throw { message: msg };
   }
 };

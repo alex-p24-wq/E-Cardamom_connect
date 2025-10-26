@@ -48,7 +48,7 @@ router.get('/', async (req, res) => {
 // Create product (farmer only) with optional image upload
 router.post('/products', requireAuth, requireRole('farmer'), upload.single('image'), async (req, res) => {
   try {
-    const { name, price, stock, grade, state, district, nearestHub, description } = req.body;
+    const { name, price, stock, grade, state, district, nearestHub, description, type } = req.body;
     if (!name || price == null || stock == null || !grade) {
       return res.status(400).json({ message: 'name, price, stock, grade are required' });
     }
@@ -61,8 +61,19 @@ router.post('/products', requireAuth, requireRole('farmer'), upload.single('imag
       return res.status(400).json({ message: 'Price must be a positive number greater than 0' });
     }
     
-    if (isNaN(stockNum) || stockNum < 1) {
-      return res.status(400).json({ message: 'Stock must be at least 1 kg or more' });
+    // Different stock validation for bulk vs regular products
+    const isBulkProduct = type === 'Bulk' || stockNum >= 20;
+    
+    if (isBulkProduct) {
+      // Bulk products: minimum 20 kg
+      if (isNaN(stockNum) || stockNum < 20) {
+        return res.status(400).json({ message: 'Bulk products must have at least 20 kg stock' });
+      }
+    } else {
+      // Regular products: 1-20 kg
+      if (isNaN(stockNum) || stockNum < 1 || stockNum > 20) {
+        return res.status(400).json({ message: 'Regular products stock must be between 1-20 kg' });
+      }
     }
 
     // Validate grade
@@ -93,9 +104,20 @@ router.post('/products', requireAuth, requireRole('farmer'), upload.single('imag
       imageUrl = req.body.image.trim();
     }
 
+    // Find hub ID by name for bulk products
+    let hubId = undefined;
+    if (isBulkProduct && nearestHub) {
+      const { default: Hub } = await import('../models/Hub.js');
+      const hub = await Hub.findOne({ name: nearestHub.trim() });
+      if (hub) {
+        hubId = hub._id;
+      }
+    }
+
     const product = await Product.create({
       user: req.user._id,
       name: name.trim(),
+      type: type?.trim(),
       price: priceNum,
       stock: stockNum,
       grade,
@@ -103,6 +125,7 @@ router.post('/products', requireAuth, requireRole('farmer'), upload.single('imag
       state: state?.trim(),
       district: district?.trim(),
       nearestHub: nearestHub?.trim(),
+      hubId: hubId,
       description: description?.trim(),
     });
 
